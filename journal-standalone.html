@@ -1,0 +1,2298 @@
+<!-- ============================================================
+     Собранный в один файл журнал CUBICA.
+     НЕ РЕДАКТИРУЙТЕ ЭТОТ ФАЙЛ: он перезаписывается сборкой.
+     Правьте journal.html, journal-core.js и journal-app.js,
+     затем выполните: node build-standalone.js
+     ============================================================ -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CUBICA · Рабочий журнал</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#f4f5f7;color:#1a1a2e;line-height:1.5;padding:20px 18px 60px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1440px;margin:0 auto}
+
+/* шапка */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;background:#fff;border:1px solid #e6e6e6;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.04);margin-bottom:14px}
+.brand{font-size:19px;font-weight:900;color:#c00000;letter-spacing:.5px;display:flex;align-items:baseline;gap:10px}
+.brand span{font-size:13px;font-weight:600;color:#7a8a99;letter-spacing:1.6px;text-transform:uppercase}
+.mgr{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:#7a8a99;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.mgr input{padding:8px 12px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1a2e;width:180px}
+.mgr input:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.badge{font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;background:#eef2f7;color:#5a6b7a;text-transform:uppercase;letter-spacing:.6px;cursor:help}
+.badge.api{background:#e8f5e9;color:#2e7d32}
+
+/* панель кнопок */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.btn{padding:11px 18px;font-size:13px;font-weight:700;font-family:inherit;border-radius:9px;border:1px solid #ddd;background:#fff;color:#333;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:#c00000;color:#c00000;background:#fff5f5;transform:translateY(-1px)}
+.btn.primary{background:#c00000;color:#fff;border-color:#c00000;box-shadow:0 6px 18px rgba(192,0,0,.25)}
+.btn.primary:hover{background:#a50003;color:#fff;box-shadow:0 8px 24px rgba(192,0,0,.35)}
+.btn.green{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.btn.green:hover{background:#245f28;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.spacer{flex:1 1 auto}
+
+/* предупреждение */
+.warn{display:none;padding:12px 16px;border-radius:10px;background:#fff8e5;border:1px solid #f0d896;color:#8a5800;font-size:13px;margin-bottom:14px;line-height:1.6}
+.warn.show{display:block}
+.warn b{color:#b26a00}
+
+/* статистика */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid #e6e6e6;border-radius:10px;padding:14px 16px}
+.stat .lb{font-size:10.5px;font-weight:800;color:#9aa1ac;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.stat .vl{font-size:21px;font-weight:800;color:#1a1a2e;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .vl.red{color:#c00000}
+.stat .vl.green{color:#2e7d32}
+.stat .vl small{font-size:12px;color:#9aa1ac;font-weight:600;margin-left:3px}
+
+/* фильтры */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input[type=text]{flex:1 1 280px;padding:10px 14px;border:1px solid #ccc;border-radius:9px;font-size:13.5px;font-family:inherit}
+.filters input[type=text]:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.filters select{padding:10px 12px;border:1px solid #ccc;border-radius:9px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer}
+.filters select:focus{outline:none;border-color:#c00000}
+
+/* таблица */
+.tablewrap{background:#fff;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#fafbfc;text-align:left;padding:11px 14px;font-size:10.5px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #ececec;white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fcfafa}
+tbody tr{cursor:pointer}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+td.numb{font-weight:800;color:#c00000;white-space:nowrap}
+td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
+.pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap}
+.acts{display:flex;gap:4px;justify-content:flex-end}
+.acts button{width:30px;height:30px;border-radius:7px;border:1px solid #e6e6e6;background:#fff;cursor:pointer;font-size:13px;line-height:1;padding:0;transition:all .15s}
+.acts button:hover{border-color:#c00000;background:#fff5f5}
+.empty{padding:60px 20px;text-align:center;color:#9aa1ac;font-size:14px}
+.empty b{display:block;font-size:36px;margin-bottom:12px;opacity:.5}
+
+/* модалки */
+.modal{position:fixed;inset:0;background:rgba(15,15,25,.7);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.modal.open{display:flex}
+.mi{background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.35);width:100%;max-width:880px;padding:24px 26px 20px;margin:auto}
+.mi h3{font-size:18px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mi .sub{font-size:12px;color:#9aa1ac;margin-bottom:16px}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 16px;margin-bottom:14px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld.full{grid-column:1/-1}
+.fld label{font-size:10px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.6px}
+.fld input,.fld select,.fld textarea{padding:9px 11px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1a2e;background:#fff;width:100%}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.sect{margin:18px 0 10px;padding-top:14px;border-top:1px solid #ececec;font-size:11px;font-weight:800;color:#9aa1ac;text-transform:uppercase;letter-spacing:.8px}
+.rows{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.rows th{background:#fafbfc;padding:7px 6px;font-size:9.5px;color:#7a8a99;text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:1px solid #ececec;font-weight:800}
+.rows td{padding:3px 4px;border-bottom:1px solid #f4f4f4}
+.rows input{width:100%;padding:6px 7px;border:1px solid transparent;border-radius:6px;font-size:12.5px;font-family:inherit;background:transparent}
+.rows input:hover{border-color:#e6e6e6}
+.rows input:focus{outline:none;border-color:#c00000;background:#fff}
+.rows input.r{text-align:right;font-variant-numeric:tabular-nums}
+.rows td.calc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;padding-right:8px;white-space:nowrap}
+.rows .del{width:26px;height:26px;border-radius:6px;border:1px solid #f0c0c0;background:#fff;color:#c00000;cursor:pointer;font-size:11px;padding:0}
+.addrow{margin-top:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;border-radius:8px;border:1px dashed #c00000;background:#fff;color:#c00000;cursor:pointer}
+.addrow:hover{background:#fff5f5}
+.tot{display:grid;grid-template-columns:1fr auto;gap:5px 18px;max-width:340px;margin:14px 0 0 auto;font-size:13px}
+.tot .l{color:#7a8a99}
+.tot .v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tot .g{font-size:16px;color:#c00000;border-top:1px solid #f0c0c0;padding-top:8px;margin-top:4px}
+.cmt{padding:10px 12px;background:#fafbfc;border:1px solid #ececec;border-radius:8px;font-size:12.5px;margin-bottom:6px}
+.cmt .h{font-size:10.5px;color:#9aa1ac;margin-bottom:3px;font-weight:700}
+.mbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid #ececec}
+.mbar .grp{display:flex;gap:10px;flex-wrap:wrap}
+.link{display:flex;gap:8px;align-items:center;margin-top:8px}
+.link input{flex:1;padding:9px 12px;border:1px solid #ccc;border-radius:8px;font-size:12px;font-family:Consolas,monospace;background:#fafafa}
+.toast{position:fixed;left:50%;top:22px;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:13px 24px;border-radius:10px;font-weight:700;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:3000;display:none}
+.toast.show{display:block;animation:tin .25s ease-out}
+.toast.err{background:#c00000}
+@keyframes tin{from{transform:translateX(-50%) translateY(-24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.hintline{font-size:12px;color:#9aa1ac;margin-top:6px}
+@media(max-width:900px){.tablewrap{overflow-x:auto}table{min-width:820px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">CUBICA<span>Рабочий журнал</span></div>
+    <div class="mgr">Менеджер
+      <input type="text" id="mgrInput" placeholder="Имя менеджера" autocomplete="off">
+    </div>
+    <div class="badge" id="modeBadge">Хранилище: локально</div>
+  </header>
+
+  <div class="toolbar">
+    <button type="button" class="btn primary" id="btnNewInvoice">＋ Новый счёт</button>
+    <button type="button" class="btn green" id="btnNewKp">🧮 Калькулятор → КП</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="btnExport">⬇ Экспорт JSON</button>
+    <button type="button" class="btn" id="btnImport">⬆ Импорт JSON</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+    <button type="button" class="btn" id="btnSync" style="display:none">⟳ Синхронизировать</button>
+    <button type="button" class="btn" id="btnSelfCheck">🩺 Проверить журнал</button>
+    <button type="button" class="btn" id="btnSettings">⚙ Настройки</button>
+  </div>
+
+  <div class="warn" id="localWarn">
+    <b>Локальный режим.</b> Журнал хранится в этом браузере (localStorage домена <code>6471811-source.github.io</code>).
+    Номера выдаются этим браузером: если с журналом работают несколько менеджеров или несколько компьютеров,
+    порядковые номера могут совпасть, и каждый увидит только свои записи.
+    Для общего журнала включите серверный режим в «Настройках» (нужно расширить Cloudflare Worker).
+  </div>
+
+  <div class="warn" id="backupWarn">
+    <b>Резервная копия.</b> <span id="backupText"></span>
+    <button type="button" class="btn" id="btnBackupNow" style="margin-left:10px">⬇ Скачать копию</button>
+  </div>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="filters">
+    <input type="text" id="search" placeholder="🔍 Поиск: номер, контрагент, УНП, комментарий…" autocomplete="off">
+    <select id="statusFilter"></select>
+    <select id="seriesFilter">
+      <option value="">Все типы</option>
+      <option value="invoice">Счета</option>
+      <option value="kp">КП</option>
+    </select>
+    <select id="periodFilter">
+      <option value="">Всё время</option>
+      <option value="today">Сегодня</option>
+      <option value="week">Последние 7 дней</option>
+      <option value="month">Этот месяц</option>
+      <option value="prev-month">Прошлый месяц</option>
+      <option value="year">Этот год</option>
+    </select>
+    <select id="sortFilter">
+      <option value="date-desc">Сначала новые</option>
+      <option value="date-asc">Сначала старые</option>
+      <option value="sum-desc">По сумме ↓</option>
+      <option value="sum-asc">По сумме ↑</option>
+      <option value="number-desc">По номеру ↓</option>
+    </select>
+  </section>
+
+  <section class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px">Номер</th>
+          <th style="width:92px">Дата</th>
+          <th>Контрагент</th>
+          <th style="width:150px;text-align:right">Сумма с НДС</th>
+          <th style="width:140px">Статус</th>
+          <th style="width:120px">Менеджер</th>
+          <th style="width:150px"></th>
+        </tr>
+      </thead>
+      <tbody id="recsBody"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none">
+      <b>📒</b>
+      Журнал пуст.<br>
+      Нажмите «＋ Новый счёт» или «🧮 Калькулятор → КП», чтобы создать первую запись.
+    </div>
+  </section>
+</div>
+
+<!-- ===================== КАРТОЧКА ЗАПИСИ ===================== -->
+<div class="modal" id="recModal">
+  <div class="mi">
+    <h3>
+      <span id="mTitle">Запись</span>
+      <select id="mStatus" style="padding:7px 12px;border-radius:8px;border:1px solid #ccc;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer"></select>
+    </h3>
+    <div class="sub" id="mSub"></div>
+
+    <div class="mrow">
+      <div class="fld"><label for="mNumber">Номер</label><input type="text" id="mNumber"></div>
+      <div class="fld"><label for="mCreated">Создано</label><input type="text" id="mCreated" readonly></div>
+      <div class="fld"><label for="mUpdated">Изменено</label><input type="text" id="mUpdated" readonly></div>
+      <div class="fld"><label for="mManager">Менеджер</label><input type="text" id="mManager"></div>
+    </div>
+
+    <div class="sect">Контрагент</div>
+    <div class="mrow">
+      <div class="fld full"><label for="cName">Наименование</label><input type="text" id="cName" placeholder="ООО «Пример»"></div>
+      <div class="fld full"><label for="cFull">Полное наименование</label><input type="text" id="cFull"></div>
+      <div class="fld"><label for="cUnp">УНП</label><input type="text" id="cUnp" maxlength="9" inputmode="numeric"></div>
+      <div class="fld"><label for="cAccount">Расчётный счёт</label><input type="text" id="cAccount"></div>
+      <div class="fld full"><label for="cAddr">Юридический адрес</label><input type="text" id="cAddr"></div>
+      <div class="fld"><label for="cBank">Банк</label><input type="text" id="cBank"></div>
+      <div class="fld"><label for="cBic">БИК</label><input type="text" id="cBic" maxlength="7"></div>
+      <div class="fld"><label for="cPosition">Должность подписанта</label><input type="text" id="cPosition"></div>
+      <div class="fld"><label for="cFio">ФИО подписанта</label><input type="text" id="cFio"></div>
+      <div class="fld"><label for="cBasis">Основание</label><input type="text" id="cBasis"></div>
+      <div class="fld"><label for="cPhone">Телефон</label><input type="text" id="cPhone"></div>
+      <div class="fld"><label for="cEmail">E-mail</label><input type="text" id="cEmail"></div>
+    </div>
+
+    <div class="sect">Условия сделки</div>
+    <div class="mrow">
+      <div class="fld"><label for="dDelivery">Поставка</label>
+        <select id="dDelivery"><option value="pickup">Самовывоз</option><option value="delivery">Доставка</option></select>
+      </div>
+      <div class="fld"><label for="dPayment">Предоплата, %</label><input type="number" id="dPayment" min="0" max="100" step="5"></div>
+      <div class="fld"><label for="dDays">Срок поставки, дней</label><input type="number" id="dDays" min="0" max="60"></div>
+      <div class="fld full"><label for="dAddress">Адрес доставки</label><input type="text" id="dAddress"></div>
+    </div>
+
+    <div class="sect">Позиции</div>
+    <table class="rows">
+      <thead>
+        <tr>
+          <th>Наименование</th>
+          <th style="width:82px;text-align:right">Расчёт</th>
+          <th style="width:82px;text-align:right">Запас</th>
+          <th style="width:64px">Ед.</th>
+          <th style="width:96px;text-align:right">Цена</th>
+          <th style="width:110px;text-align:right">Сумма с НДС</th>
+          <th style="width:32px"></th>
+        </tr>
+      </thead>
+      <tbody id="rowsBody"></tbody>
+    </table>
+    <button type="button" class="addrow" id="btnAddRow">＋ Добавить позицию</button>
+
+    <div class="tot">
+      <div class="l">Без НДС:</div><div class="v" id="tSubtotal">0,00</div>
+      <div class="l">НДС:</div><div class="v" id="tVat">0,00</div>
+      <div class="l g">Итого с НДС:</div><div class="v g" id="tTotal">0,00</div>
+    </div>
+
+    <div class="sect">Комментарии</div>
+    <div id="commentsList"></div>
+    <div class="mrow" style="margin-top:8px">
+      <div class="fld full"><input type="text" id="newComment" placeholder="Написать комментарий и нажать Enter…"></div>
+    </div>
+    <div class="fld full" style="margin-top:10px">
+      <label for="mComment">Комментарий к записи (виден в журнале)</label>
+      <textarea id="mComment" rows="2" placeholder="Например: клиент просил пересчитать с монтажом"></textarea>
+    </div>
+
+    <div class="sect">История</div>
+    <div id="historyList"></div>
+
+    <div class="link" id="clientLinkWrap" style="display:none">
+      <input type="text" id="clientUrl" readonly onclick="this.select()">
+      <button type="button" class="btn" id="btnCopyUrl">📋</button>
+      <a class="btn" id="btnOpenUrl" target="_blank" rel="noopener">↗</a>
+    </div>
+
+    <div class="mbar">
+      <div class="grp">
+        <button type="button" class="btn" id="btnOpenI5">📄 Открыть в счёте (i5)</button>
+        <button type="button" class="btn green" id="btnKpLink">🔗 Ссылка для клиента</button>
+        <button type="button" class="btn" id="btnDup">📋 Копировать</button>
+      </div>
+      <div class="grp">
+        <button type="button" class="btn" id="btnDel" style="color:#c00000;border-color:#f0c0c0">✕ Удалить</button>
+        <button type="button" class="btn" id="btnClose">Закрыть</button>
+        <button type="button" class="btn primary" id="btnSaveClose">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== НАСТРОЙКИ ===================== -->
+<div class="modal" id="setModal">
+  <div class="mi" style="max-width:680px">
+    <h3>⚙ Настройки журнала</h3>
+    <div class="sub">Эти параметры хранятся в браузере и применяются на всех страницах, подключивших journal-core.js</div>
+
+    <div class="mrow">
+      <div class="fld"><label for="sManager">Менеджер по умолчанию</label><input type="text" id="sManager"></div>
+      <div class="fld"><label for="sVat">Ставка НДС, %</label><input type="number" id="sVat" min="0" max="30" step="1"></div>
+      <div class="fld"><label for="sYearReset">Сброс нумерации каждый год</label>
+        <select id="sYearReset"><option value="1">Да</option><option value="0">Нет</option></select>
+      </div>
+      <div class="fld"><label for="sMode">Режим хранилища</label>
+        <select id="sMode"><option value="local">Локально (localStorage)</option><option value="api">Сервер (Cloudflare Worker)</option></select>
+      </div>
+    </div>
+
+    <div class="sect">Формат номеров</div>
+    <div class="mrow">
+      <div class="fld"><label for="sFmtInvoice">Счета</label><input type="text" id="sFmtInvoice"></div>
+      <div class="fld"><label for="sFmtKp">Коммерческие предложения</label><input type="text" id="sFmtKp"></div>
+    </div>
+    <div class="hintline">Подстановки: <code>{YYYY}</code> — год, <code>{NNNN}</code> — порядковый номер (4 цифры). Пример: <code>СЧ-{YYYY}-{NNNN}</code> → СЧ-2026-0001</div>
+
+    <div class="sect">Адреса страниц</div>
+    <div class="mrow">
+      <div class="fld full"><label for="sUrlCalc">Калькулятор t6.3</label><input type="text" id="sUrlCalc"></div>
+      <div class="fld full"><label for="sUrlI5">Счёт-договор (i5)</label><input type="text" id="sUrlI5"></div>
+      <div class="fld full"><label for="sUrlKp">Клиентское КП (kp)</label><input type="text" id="sUrlKp"></div>
+      <div class="fld full"><label for="sApiBase">Адрес сервиса (Worker)</label><input type="text" id="sApiBase"></div>
+      <div class="fld full"><label for="sApiToken">Токен журнала</label><input type="text" id="sApiToken" placeholder="оставьте пустым, если токен на сервере не задан"></div>
+    </div>
+
+    <div class="mbar">
+      <div class="grp"><button type="button" class="btn" id="btnResetSettings">↺ По умолчанию</button></div>
+      <div class="grp">
+        <button type="button" class="btn" id="btnSetClose">Закрыть</button>
+        <button type="button" class="btn primary" id="btnSetSave">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==== journal-core.js (встроен сборкой) ==== */
+/* ============================================================
+   CUBICA · Рабочий журнал — ЯДРО (общее для всех страниц)
+
+   Подключается на: журнал (рабочий стол), t6.3 (калькулятор),
+                    i5 (счёт-договор), kp (клиентское КП)
+
+   Режимы хранения:
+     'local' — localStorage (работает сразу, без сервера;
+               журнал живёт в браузере конкретного менеджера)
+     'api'   — Cloudflare Worker cubica-kp-15ab (общий журнал,
+               сквозная нумерация без гонок) — включается в настройках
+
+   Публичный интерфейс: window.CubicaJournal
+   ============================================================ */
+(function (global) {
+  'use strict';
+
+  /* ---------- константы ---------- */
+
+  var K_RECORDS  = 'cubica_journal_v2';
+  var K_SETTINGS = 'cubica_journal_settings_v1';
+  var K_API_CACHE = 'cubica_journal_api_cache_v2';
+
+  var DEFAULTS = {
+    mode: 'local',
+    apiBase: 'https://cubica-kp-15ab.6471811.workers.dev',
+    apiToken: '',
+    manager: '',
+    vatRate: 0.20,
+    currency: 'BYN',
+    yearReset: true,
+    urls: {
+      journal: 'https://6471811-source.github.io/Cubica-journal/',
+      calc:    'https://6471811-source.github.io/Cubica-i5/',   // TODO: подставить адрес t6.3
+      i5:      'https://6471811-source.github.io/Cubica-i5/',
+      kp:      'https://6471811-source.github.io/cubica-kp/'
+    },
+    numberFormat: { invoice: 'СЧ-{YYYY}-{NNNN}', kp: 'КП-{YYYY}-{NNNN}' }
+  };
+
+  /* Реквизиты нашей фирмы — единый источник для всех страниц.
+     Раньше были продублированы в t6.3, i5 и kp. */
+  var COMPANY = {
+    name: 'ООО «ВК ТЕРМ»',
+    address: 'РБ, 223051, Минская обл., Минский р-н, аг. Колодищи, ул. Минская, д. 5, пом. 107-4',
+    phone: '+375 (44) 752-70-73',
+    email: '7527073@armstrong.by',
+    site: 'cubica.by',
+    site2: 'armstrong.by',
+    unp: '191202287',
+    account: 'BY79MTBK30120001093300125719',
+    bank: 'ЗАО «МТБанк», г. Минск',
+    bic: 'MTBKBY22',
+    director: 'Креминский И. Ю.',
+    directorPosition: 'Директор',
+    tagline: 'modern ceiling solutions',
+    issueAddress: 'аг. Колодищи, ул. Минская, 5, этаж 5, офис 508',
+    pickupAddress: 'аг. Колодищи, территория учебного парка',
+    hours: 'Пн–Пт, 09:00–15:00'
+  };
+
+  var STATUSES = [
+    { key: 'draft',    label: 'Черновик',      color: '#8a97a6' },
+    { key: 'sent',     label: 'КП отправлено', color: '#1565c0' },
+    { key: 'invoiced', label: 'Счёт выставлен',color: '#b26a00' },
+    { key: 'paid',     label: 'Оплачено',      color: '#2e7d32' },
+    { key: 'canceled', label: 'Отменено',      color: '#c00000' }
+  ];
+
+  /* ---------- утилиты ---------- */
+
+  function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
+  function num(v, d) { var n = Number(v); return isFinite(n) ? n : (d || 0); }
+
+  function uid(prefix) {
+    return (prefix || 'r') + '_' + Date.now().toString(36) + '_' +
+           Math.random().toString(36).slice(2, 8);
+  }
+
+  function nowISO() { return new Date().toISOString(); }
+
+  function pad(n, len) {
+    var s = String(n);
+    while (s.length < len) s = '0' + s;
+    return s;
+  }
+
+  function statusInfo(key) {
+    for (var i = 0; i < STATUSES.length; i++) if (STATUSES[i].key === key) return STATUSES[i];
+    return STATUSES[0];
+  }
+
+  function money(v) {
+    return (Number(v) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  /* ---------- настройки ---------- */
+
+  function loadSettings() {
+    var s = clone(DEFAULTS);
+    try {
+      var raw = localStorage.getItem(K_SETTINGS);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        for (var k in parsed) if (Object.prototype.hasOwnProperty.call(parsed, k)) {
+          if (k === 'urls' || k === 'numberFormat') {
+            for (var k2 in parsed[k]) s[k][k2] = parsed[k][k2];
+          } else s[k] = parsed[k];
+        }
+      }
+    } catch (e) { /* игнорируем битый JSON настроек */ }
+    if (!s.manager) s.manager = 'Менеджер';
+    return s;
+  }
+
+  function saveSettings(patch) {
+    var s = loadSettings();
+    for (var k in patch) if (Object.prototype.hasOwnProperty.call(patch, k)) {
+      if (k === 'urls' || k === 'numberFormat') { for (var k2 in patch[k]) s[k][k2] = patch[k][k2]; }
+      else s[k] = patch[k];
+    }
+    try { localStorage.setItem(K_SETTINGS, JSON.stringify(s)); } catch (e) {}
+    return s;
+  }
+
+  /* ---------- хранилище записей ----------
+     local — localStorage браузера;
+     api   — тот же localStorage, но как КЭШ серверного журнала,
+             чтобы весь код выше остался синхронным, а сеть работала в фоне. */
+
+  function isApi() { return loadSettings().mode === 'api'; }
+
+  function loadRecords() {
+    var key = isApi() ? K_API_CACHE : K_RECORDS;
+    try {
+      var raw = localStorage.getItem(key);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function writeRecords(list) {
+    var key = isApi() ? K_API_CACHE : K_RECORDS;
+    try {
+      localStorage.setItem(key, JSON.stringify(list));
+      emit('records-changed', { count: list.length });
+      return true;
+    } catch (e) {
+      console.error('[CubicaJournal] не удалось записать журнал:', e);
+      return false;
+    }
+  }
+
+  /* ---------- сетевой слой (серверный режим) ---------- */
+
+  function apiFetch(path, opts) {
+    var s = loadSettings();
+    opts = opts || {};
+    var headers = {};
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    if (s.apiToken) headers['Authorization'] = 'Bearer ' + s.apiToken;
+    var url = String(s.apiBase || '').replace(/\/+$/, '') + path;
+    if (!s.apiBase) return Promise.reject(new Error('не задан адрес сервиса в настройках'));
+
+    return fetch(url, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          var msg = 'HTTP ' + res.status;
+          var serverError = '';
+          try {
+            var j = JSON.parse(t);
+            serverError = (j && j.error) || '';
+            if (j && j.message) msg += ' — ' + j.message;
+            else if (j && j.error) msg += ' — ' + j.error;
+          } catch (e) { if (t) msg += ' — ' + t.slice(0, 160); }
+          if (res.status === 401) msg = 'неверный токен доступа к журналу (401)';
+          var err = new Error(msg);
+          err.status = res.status;
+          err.serverError = serverError;
+          throw err;
+        });
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    });
+  }
+
+  /* Забрать журнал с сервера в локальный кэш. */
+  function sync() {
+    if (!isApi()) return Promise.resolve(loadRecords());
+    return apiFetch('/records').then(function (data) {
+      var records = (data && data.records) || [];
+      try { localStorage.setItem(K_API_CACHE, JSON.stringify(records)); } catch (e) {}
+      emit('records-changed', { synced: true, count: records.length });
+      return records;
+    });
+  }
+
+  function pushRecord(rec, opts) {
+    opts = opts || {};
+    if (!isApi()) return Promise.resolve(null);
+    return apiFetch('/records/' + encodeURIComponent(rec.id), {
+      method: 'PUT',
+      body: JSON.stringify(rec)
+    }).catch(function (e) {
+      /* Номер занят другой записью: берём следующий у сервера и пробуем снова,
+         иначе правка молча осталась бы только в браузере. */
+      if (e.status === 409 && !opts.retried) {
+        emit('number-conflict', { id: rec.id, number: rec.number, error: e });
+        return reserveNumber(rec.series).then(function (fresh) {
+          rec.number = fresh;
+          rec.updatedAt = nowISO();
+          rec.history = rec.history || [];
+          rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'number reassigned to ' + fresh });
+          var list = loadRecords();
+          for (var i = 0; i < list.length; i++) if (list[i].id === rec.id) { list[i] = rec; break; }
+          writeRecords(list);
+          emit('number-reassigned', { id: rec.id, number: fresh });
+          return pushRecord(rec, { retried: true });
+        });
+      }
+      if (e.status === 409) {
+        console.error('[CubicaJournal] номер снова занят:', rec.number, e);
+      } else {
+        console.error('[CubicaJournal] не удалось отправить запись на сервер:', e);
+      }
+      emit('sync-error', { id: rec.id, error: e });
+      throw e;
+    });
+  }
+
+  function pushDelete(id) {
+    if (!isApi()) return Promise.resolve(null);
+    return apiFetch('/records/' + encodeURIComponent(id), { method: 'DELETE' })
+      .catch(function (e) {
+        console.error('[CubicaJournal] не удалось удалить запись на сервере:', e);
+        emit('sync-error', { id: id, error: e });
+        throw e;
+      });
+  }
+
+  /* Порядковый номер: в серверном режиме его выдаёт база одной
+     транзакцией, поэтому дубли невозможны даже при одновременной
+     работе нескольких менеджеров. */
+  function reserveNumber(series) {
+    series = series === 'kp' ? 'kp' : 'invoice';
+    if (!isApi()) return Promise.resolve(nextNumber(series));
+    return apiFetch('/number', {
+      method: 'POST',
+      body: JSON.stringify({ series: series, year: new Date().getFullYear() })
+    }).then(function (r) {
+      var year = num(r && r.year, new Date().getFullYear());
+      var seq = num(r && r.seq, 1);
+      return formatNumber(series, seq, year);
+    });
+  }
+
+  /* Создать запись с серверным номером. */
+  function createReserved(series, opts) {
+    return reserveNumber(series).then(function (number) {
+      var rec = emptyRecord({ series: series, manager: opts && opts.manager, number: null });
+      rec.number = number;
+      return save(rec, { assignNumber: false });
+    });
+  }
+
+  /* ---------- события внутри страницы ---------- */
+
+  var listeners = {};
+  function on(name, fn) {
+    (listeners[name] = listeners[name] || []).push(fn);
+    return function off() {
+      listeners[name] = listeners[name].filter(function (f) { return f !== fn; });
+    };
+  }
+  function emit(name, data) {
+    (listeners[name] || []).forEach(function (fn) {
+      try { fn(data); } catch (e) { console.error(e); }
+    });
+  }
+
+  /* ---------- нумерация ---------- */
+
+  /* Достаём порядковый номер из строки вида «СЧ-2026-0042» */
+  function parseSeq(number) {
+    var m = String(number || '').match(/(\d+)\s*$/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function parseYear(number) {
+    var m = String(number || '').match(/(20\d{2})/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function formatNumber(series, seq, year) {
+    var s = loadSettings();
+    var tpl = (s.numberFormat && s.numberFormat[series]) || DEFAULTS.numberFormat[series] || '{NNNN}';
+    return tpl
+      .replace('{YYYY}', String(year))
+      .replace('{YY}', String(year).slice(2))
+      .replace('{NNNN}', pad(seq, 4))
+      .replace('{NNN}', pad(seq, 3))
+      .replace('{NN}', pad(seq, 2));
+  }
+
+  /* Следующий номер серии. В local-режиме номер НЕ резервируется:
+     при одновременной работе двух менеджеров возможен дубль.
+     В api-режиме номер выдаёт сервер (см. примечание в шапке). */
+  function nextNumber(series, opts) {
+    opts = opts || {};
+    var s = loadSettings();
+    var year = new Date().getFullYear();
+    var list = loadRecords();
+    var max = 0;
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      if (series && r.series !== series) continue;
+      if (s.yearReset && parseYear(r.number) !== null && parseYear(r.number) !== year) continue;
+      var q = parseSeq(r.number);
+      if (q > max) max = q;
+    }
+    if (typeof opts.reservedMax === 'number' && opts.reservedMax > max) max = opts.reservedMax;
+    return formatNumber(series, max + 1, year);
+  }
+
+  /* ---------- записи ---------- */
+
+  function emptyRecord(opts) {
+    opts = opts || {};
+    var s = loadSettings();
+    var series = opts.series === 'kp' ? 'kp' : 'invoice';
+    var rec = {
+      id: uid(series === 'kp' ? 'kp' : 'inv'),
+      series: series,
+      number: '',
+      status: 'draft',
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+      createdBy: opts.manager || s.manager,
+      contractor: {
+        name: '', full: '', unp: '', addr: '', account: '', bank: '',
+        bic: '', position: '', fio: '', basis: '', phone: '', email: ''
+      },
+      deal: {
+        delivery: 'pickup', payment: 100, days: 3,
+        deliveryData: { address: '', phone: '', time: '', date: '', weight: 0, volume: 0, maxLen: 0 }
+      },
+      rows: [],
+      totals: { subtotal: 0, vat: 0, total: 0, currency: s.currency },
+      comment: '',
+      comments: [],
+      rooms: [],
+      meta: null,
+      client: { token: '', url: '', sentAt: '', openedAt: '' },
+      history: [{ at: nowISO(), by: opts.manager || s.manager, action: 'created' }]
+    };
+    if (opts.number !== null) rec.number = opts.number || nextNumber(series);
+    return rec;
+  }
+
+  function get(id) {
+    var list = loadRecords();
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  var STORAGE_ERROR = 'Не удалось сохранить журнал: в браузере закончилось место';
+
+  function save(rec, opts) {
+    opts = opts || {};
+    if (!rec || !rec.id) return null;
+    var list = loadRecords();
+    rec.updatedAt = nowISO();
+    if (!rec.totals) rec.totals = computeTotals(rec.rows, loadSettings().vatRate);
+    if (!rec.number && opts.assignNumber !== false) rec.number = nextNumber(rec.series);
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].id === rec.id) { idx = i; break; }
+    if (idx >= 0) list[idx] = rec; else list.push(rec);
+    if (!writeRecords(list)) {
+      /* Вернуть запись как сохранённую значило бы соврать: в хранилище её нет. */
+      emit('storage-error', { id: rec.id, message: STORAGE_ERROR });
+      return null;
+    }
+    emit('record-saved', rec);
+    if (isApi() && !opts.localOnly) pushRecord(rec).catch(function () {});
+    return rec;
+  }
+
+  function remove(id) {
+    var list = loadRecords();
+    var out = list.filter(function (r) { return r.id !== id; });
+    if (!writeRecords(out)) {
+      emit('storage-error', { id: id, message: STORAGE_ERROR });
+      return false;
+    }
+    emit('record-removed', { id: id });
+    if (isApi()) pushDelete(id).catch(function () {});
+    return out.length !== list.length;
+  }
+
+  /* Копия записи: новый id, новый номер, статус «черновик»,
+     контрагент и позиции сохраняются. */
+  function duplicate(id, opts) {
+    opts = opts || {};
+    var src = get(id);
+    if (!src) return null;
+    var copy = clone(src);
+    copy.id = uid(src.series === 'kp' ? 'kp' : 'inv');
+    /* opts.number передаёт вызывающий, когда номер уже выдан сервером */
+    copy.number = opts.number || nextNumber(src.series);
+    copy.status = 'draft';
+    copy.createdAt = nowISO();
+    copy.updatedAt = nowISO();
+    copy.createdBy = opts.manager || loadSettings().manager;
+    copy.client = { token: '', url: '', sentAt: '', openedAt: '' };
+    copy.history = [{ at: nowISO(), by: copy.createdBy, action: 'duplicated from ' + src.number }];
+    if (!opts.keepComment) { copy.comment = ''; copy.comments = []; }
+    delete copy.demo;   // копия демо-записи демо-записью не является
+    save(copy, { assignNumber: false });
+    return copy;
+  }
+
+  /* Копия со сквозным номером от сервера — то, что нужно в общем журнале. */
+  function duplicateReserved(id, opts) {
+    opts = opts || {};
+    var src = get(id);
+    if (!src) return Promise.reject(new Error('запись не найдена'));
+    return reserveNumber(src.series).then(function (number) {
+      return duplicate(id, Object.assign({}, opts, { number: number }));
+    });
+  }
+
+  /* ---------- итоги ---------- */
+
+  function rowQty(r) { return num(r.qtyCalc) + num(r.qtyReserve); }
+  function rowSum(r) { return rowQty(r) * num(r.price); }
+
+  function computeTotals(rows, vatRate) {
+    var rate = typeof vatRate === 'number' ? vatRate : loadSettings().vatRate;
+    var sub = 0;
+    (rows || []).forEach(function (r) { sub += rowSum(r); });
+    var vat = sub * rate;
+    return {
+      subtotal: Math.round(sub * 100) / 100,
+      vat: Math.round(vat * 100) / 100,
+      total: Math.round((sub + vat) * 100) / 100,
+      currency: loadSettings().currency
+    };
+  }
+
+  /* Пересобрать плоский список позиций из помещений калькулятора
+     (аналог mergeRows из i5). */
+  function rowsFromRooms(rooms) {
+    var map = {}, order = [];
+    (rooms || []).forEach(function (room) {
+      (room.rows || []).forEach(function (r) {
+        var label = String(r.label || '');
+        var unit = r.unit || 'шт.';
+        var qty = num(r.qty);
+        if (/^Рейка Cubica /.test(label)) {
+          var m = label.match(/(\d+)\s*мм/i);
+          if (m && unit !== 'м.п.') qty = (parseInt(m[1], 10) / 1000) * qty;
+          unit = 'м.п.';
+          label = label.replace(/\s*\(объединено\)\s*$/i, '').replace(/\s+\d+\s*мм\s*$/i, '').trim();
+        }
+        var key = label + '|' + unit;
+        if (map[key]) { map[key].qtyCalc += qty; }
+        else { map[key] = { label: label, qtyCalc: qty, qtyReserve: 0, unit: unit, price: 0 }; order.push(key); }
+      });
+    });
+    return order.map(function (k) {
+      var r = map[k];
+      r.qtyCalc = Math.round(r.qtyCalc * 100) / 100;
+      return r;
+    });
+  }
+
+  /* Запись из payload калькулятора t6.3 */
+  function fromCalcPayload(payload, opts) {
+    opts = opts || {};
+    var rec = emptyRecord({ series: 'invoice', manager: opts.manager });
+    rec.rooms = clone(payload.rooms || []);
+    rec.meta = clone(payload.meta || null);
+    if (payload.company) rec.company = clone(payload.company);
+    rec.rows = rowsFromRooms(rec.rooms);
+    if (!rec.rows.length && Array.isArray(payload.rows)) {
+      rec.rows = payload.rows.map(function (r) {
+        return { label: String(r.label || ''), qtyCalc: num(r.qty), qtyReserve: 0, unit: r.unit || 'шт.', price: 0 };
+      });
+    }
+    rec.totals = computeTotals(rec.rows);
+    rec.history.push({ at: nowISO(), by: rec.createdBy, action: 'from calculator' });
+    return save(rec, { assignNumber: false });
+  }
+
+  /* ---------- сборка клиентского payload v6 (как в i5) ---------- */
+
+  function buildClientPayload(rec) {
+    var s = loadSettings();
+    var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
+    var rooms = (rec.rooms || []).map(function (room) {
+      return {
+        name: room.name || 'Помещение',
+        L_in: num(room.L_in), W_in: num(room.W_in),
+        railW: num(room.railW, 50), railH: num(room.railH, 30), gap: num(room.gap, 15),
+        color: room.color || 'denver',
+        colorLabel: room.colorLabel || room.color || 'denver',
+        caps: room.caps ? 1 : 0, angle: room.angle ? 1 : 0,
+        rotation: num(room.rotationDeg || room.rotation),
+        polygon: room.polygon || null,
+        areaM2: num(room.areaM2),
+        rows: (room.rows || []).map(function (r) {
+          return { label: String(r.label || ''), qty: num(r.qty), unit: r.unit || 'шт.' };
+        })
+      };
+    });
+    var meta = rec.meta || {};
+    var first = rooms[0] || {};
+    var valid = new Date();
+    valid.setDate(valid.getDate() + 10);
+
+    return {
+      v: 6,
+      rooms: rooms,
+      i5_url: s.urls.i5,
+      L_in: num(meta.L_in || first.L_in),
+      W_in: num(meta.W_in || first.W_in),
+      area: num(meta.area) || rooms.reduce(function (a, r) { return a + num(r.areaM2); }, 0),
+      color: meta.color || first.colorLabel || '',
+      railSpec: (num(meta.railW, first.railW || 50)) + '×' + (num(meta.railH, first.railH || 30)),
+      polygon: meta.polygon || first.polygon || null,
+      p: {
+        railW: num(meta.railW, first.railW || 50),
+        railH: num(meta.railH, first.railH || 30),
+        gap: num(meta.gap, first.gap || 15),
+        caps: (meta.caps !== undefined ? meta.caps : first.caps) ? 1 : 0,
+        angle: (meta.angle !== undefined ? meta.angle : first.angle) ? 1 : 0
+      },
+      r: num(meta.rotation || first.rotation),
+      rows: (rec.rows || []).map(function (r) {
+        return { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
+      }),
+      price: totals.total,
+      subtotal: totals.subtotal,
+      vat: totals.vat,
+      currency: s.currency,
+      invoiceNumber: rec.number,
+      deal: clone(rec.deal),
+      buyer: clone(rec.contractor),
+      company: COMPANY,
+      manager: rec.createdBy || s.manager,
+      phone: COMPANY.phone,
+      valid: pad(valid.getDate(), 2) + '.' + pad(valid.getMonth() + 1, 2) + '.' + valid.getFullYear()
+    };
+  }
+
+  /* ---------- base64url ---------- */
+
+  function b64enc(str) {
+    var bytes = new TextEncoder().encode(str);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function b64dec(str) {
+    if (!str) return null;
+    var s = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    try {
+      var bin = atob(s);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch (e) { return null; }
+  }
+
+  /* ---------- ссылки ---------- */
+
+  function withParam(url, key, value) {
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + key + '=' + encodeURIComponent(value);
+  }
+
+  /* Открыть запись в i5 (счёт-договор) — по id, без километрового base64 */
+  function i5UrlForRecord(rec, opts) {
+    opts = opts || {};
+    var s = loadSettings();
+    var url = withParam(s.urls.i5, 'jid', rec.id);
+    if (opts.autopdf) url = withParam(url, 'autopdf', '1');
+    return url;
+  }
+
+  /* Открыть калькулятор t6.3 (новый расчёт или правка существующего) */
+  function calcUrlForRecord(rec) {
+    var s = loadSettings();
+    return rec ? withParam(s.urls.calc, 'jid', rec.id) : s.urls.calc;
+  }
+
+  function kpUrlForToken(token) {
+    var s = loadSettings();
+    return withParam(s.urls.kp, 's', token);
+  }
+
+  /* Отправить КП клиенту: payload → Cloudflare Worker → короткая ссылка */
+  function sendKpToClient(rec) {
+    var s = loadSettings();
+    var payload = buildClientPayload(rec);
+    var data = b64enc(JSON.stringify(payload));
+    return fetch(s.apiBase + '/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      /* recordId — чтобы сервис связал ссылку с записью и потом
+         показал менеджеру, открывал ли клиент это КП */
+      body: JSON.stringify({ payload: data, recordId: rec.id })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }).then(function (j) {
+      if (!j || !j.id) throw new Error('Сервис не вернул id');
+      rec.client = rec.client || {};
+      rec.client.token = j.id;
+      rec.client.url = kpUrlForToken(j.id);
+      rec.client.sentAt = nowISO();
+      if (rec.status === 'draft') rec.status = 'sent';
+      rec.history = rec.history || [];
+      rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link created' });
+      save(rec, { assignNumber: false });
+      return rec.client.url;
+    });
+  }
+
+  /* Открывал ли клиент отправленное КП. Работает и в локальном режиме:
+     события открытий хранятся на сервере по id записи, независимо от того,
+     где лежит сама запись. Ошибка не критична — вернём null. */
+  function fetchOpens(recordId) {
+    if (!recordId || !loadSettings().apiBase) return Promise.resolve(null);
+    return apiFetch('/records/' + encodeURIComponent(recordId) + '/opens')
+      .catch(function () { return null; });
+  }
+
+  /* ---------- комментарии / история ---------- */
+  function addComment(rec, text) {
+    if (!text) return rec;
+    rec.comments = rec.comments || [];
+    rec.comments.push({ at: nowISO(), by: loadSettings().manager, text: String(text) });
+    return save(rec, { assignNumber: false });
+  }
+
+  function addHistory(rec, action) {
+    rec.history = rec.history || [];
+    rec.history.push({ at: nowISO(), by: loadSettings().manager, action: action });
+    return rec;
+  }
+
+  /* ---------- экспорт / импорт ---------- */
+
+  function exportJSON() {
+    var s = loadSettings();
+    /* Токен доступа в файл копии не пишем: копии пересылают почтой,
+       кладут в облако, забывают на флешке — а токен открывает весь журнал. */
+    delete s.apiToken;
+    return {
+      version: 2,
+      exported: nowISO(),
+      settings: s,
+      records: loadRecords()
+    };
+  }
+
+  function importJSON(data, opts) {
+    opts = opts || {};
+    var incoming = Array.isArray(data) ? data : (data && data.records);
+    if (!Array.isArray(incoming)) throw new Error('Неверный формат файла');
+
+    var before = loadRecords();
+    var list = opts.replace ? [] : before.slice();
+    var added = 0, updated = 0;
+    var touched = [];
+
+    incoming.forEach(function (rec) {
+      if (!rec || !rec.id) return;
+      var idx = -1;
+      for (var i = 0; i < list.length; i++) if (list[i].id === rec.id) { idx = i; break; }
+      if (idx >= 0) { list[idx] = rec; updated++; } else { list.push(rec); added++; }
+      touched.push(rec);
+    });
+
+    if (!writeRecords(list)) {
+      emit('storage-error', { message: STORAGE_ERROR });
+      throw new Error(STORAGE_ERROR);
+    }
+
+    /* В серверном режиме импортированное нужно отправить на сервер.
+       Иначе ближайшая синхронизация затрёт кэш данными сервера,
+       и восстановленный журнал молча пропадёт. */
+    var removed = 0;
+    if (isApi()) {
+      if (opts.replace) {
+        var keep = {};
+        list.forEach(function (r) { keep[r.id] = true; });
+        before.forEach(function (r) {
+          if (!keep[r.id]) { removed++; pushDelete(r.id).catch(function () {}); }
+        });
+      }
+      touched.forEach(function (rec) { pushRecord(rec).catch(function () {}); });
+    }
+
+    return {
+      added: added,
+      updated: updated,
+      removed: removed,
+      pushed: isApi() ? touched.length : 0
+    };
+  }
+
+  /* ---------- сводка для рабочего стола ---------- */
+
+  function summary() {
+    var list = loadRecords();
+    var out = { total: 0, sum: 0, sumPaid: 0, sumMonth: 0, byStatus: {} };
+    STATUSES.forEach(function (s) { out.byStatus[s.key] = 0; });
+    var now = new Date();
+    list.forEach(function (r) {
+      out.total++;
+      var t = r.totals && r.totals.total ? num(r.totals.total) : num(computeTotals(r.rows).total);
+      out.sum += t;
+      if (r.status === 'paid') out.sumPaid += t;
+      var d = r.createdAt ? new Date(r.createdAt) : null;
+      if (d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) out.sumMonth += t;
+      if (out.byStatus[r.status] === undefined) out.byStatus[r.status] = 0;
+      out.byStatus[r.status]++;
+    });
+    return out;
+  }
+
+  /* ---------- публичный API ---------- */
+
+  var CJ = {
+    version: '1.0.0',
+    COMPANY: COMPANY,
+    STATUSES: STATUSES,
+    DEFAULTS: DEFAULTS,
+
+    // настройки
+    settings: loadSettings,
+    saveSettings: saveSettings,
+    manager: function () { return loadSettings().manager; },
+    isApi: isApi,
+
+    // серверный режим
+    sync: sync,
+    reserveNumber: reserveNumber,
+    createReserved: createReserved,
+    apiFetch: apiFetch,
+
+    // записи
+    all: loadRecords,
+    get: get,
+    save: save,
+    remove: remove,
+    duplicate: duplicate,
+    duplicateReserved: duplicateReserved,
+    create: emptyRecord,
+    fromCalcPayload: fromCalcPayload,
+
+    // нумерация
+    nextNumber: nextNumber,
+    formatNumber: formatNumber,
+    parseSeq: parseSeq,
+
+    // расчёты
+    rowQty: rowQty,
+    rowSum: rowSum,
+    computeTotals: computeTotals,
+    rowsFromRooms: rowsFromRooms,
+
+    // клиентское КП
+    buildClientPayload: buildClientPayload,
+    sendKpToClient: sendKpToClient,
+    fetchOpens: fetchOpens,
+    i5UrlForRecord: i5UrlForRecord,
+    calcUrlForRecord: calcUrlForRecord,
+    kpUrlForToken: kpUrlForToken,
+    withParam: withParam,
+
+    // прочее
+    addComment: addComment,
+    addHistory: addHistory,
+    exportJSON: exportJSON,
+    importJSON: importJSON,
+    summary: summary,
+    statusInfo: statusInfo,
+    money: money,
+
+    // утилиты
+    b64enc: b64enc,
+    b64dec: b64dec,
+    uid: uid,
+    num: num,
+    clone: clone,
+    nowISO: nowISO,
+
+    // события
+    on: on
+  };
+
+  /* Синхронизация между вкладками: журнал, открытый в другой вкладке,
+     узнаёт об изменениях немедленно. */
+  global.addEventListener('storage', function (e) {
+    if (e.key === K_RECORDS) emit('records-changed', { external: true });
+    if (e.key === K_SETTINGS) emit('settings-changed', {});
+  });
+
+  global.CubicaJournal = CJ;
+})(window);
+
+</script>
+<script>
+/* ==== journal-app.js (встроен сборкой) ==== */
+/* ============================================================
+   CUBICA · Рабочий журнал — логика страницы
+   Зависит от journal-core.js (window.CubicaJournal)
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var CJ = window.CubicaJournal;
+
+  /* Что логика ожидает от ядра. Если чего-то нет — файлы разных версий:
+     обычно браузер держит в кэше старый journal-core.js. Без этой проверки
+     первое же нажатие падало бы с ошибкой в консоли, а менеджер видел бы
+     «кнопки не работают». */
+  var REQUIRED_CORE = [
+    'all', 'get', 'save', 'remove', 'create', 'duplicate', 'duplicateReserved',
+    'computeTotals', 'nextNumber', 'parseSeq', 'formatNumber', 'rowQty', 'rowSum',
+    'isApi', 'sync', 'fetchOpens', 'settings', 'saveSettings', 'manager',
+    'buildClientPayload', 'sendKpToClient', 'fromCalcPayload',
+    'i5UrlForRecord', 'calcUrlForRecord', 'withParam',
+    'exportJSON', 'importJSON', 'summary', 'statusInfo', 'money',
+    'addComment', 'addHistory', 'clone', 'num', 'nowISO', 'on', 'b64enc', 'b64dec',
+    'STATUSES', 'COMPANY'
+  ];
+
+  function showFatal(title, items) {
+    var host = document.querySelector('.wrap') || document.body;
+    if (!host) return;
+    var box = document.createElement('div');
+    box.setAttribute('data-diagnostic', 'error');
+    box.style.cssText = 'margin:0 0 16px;padding:18px 20px;border:2px solid #c00000;' +
+      'border-radius:12px;background:#fff5f5;color:#7a0000;font-size:13.5px;line-height:1.65';
+    box.innerHTML = '<b>' + title + '</b><ul style="margin:8px 0 0 18px;padding:0">' +
+      items.map(function (t) { return '<li style="margin-bottom:5px">' + t + '</li>'; }).join('') +
+      '</ul>';
+    host.insertBefore(box, host.firstChild);
+  }
+
+  if (!CJ) {
+    showFatal('Журнал не запустился.', [
+      'Не загрузился <b>journal-core.js</b> — файл должен лежать рядом с journal.html и называться точно так же.',
+      'Проще всего взять <b>journal-standalone.html</b>: в нём оба скрипта уже внутри.'
+    ]);
+    return;
+  }
+
+  /* Элементы, без которых журнал не запустится. Если какого-то нет —
+     значит страница journal.html осталась от старой версии, а скрипты
+     обновились. Без этой проверки логика падала бы на первом же
+     обращении к несуществующему элементу. */
+  var REQUIRED_DOM = [
+    'mgrInput', 'stats', 'recsBody', 'emptyState', 'search', 'statusFilter',
+    'seriesFilter', 'periodFilter', 'sortFilter', 'btnNewInvoice', 'btnNewKp',
+    'btnSelfCheck', 'btnSettings', 'btnSync', 'backupWarn', 'historyList',
+    'recModal', 'setModal', 'rowsBody', 'btnAddRow', 'mStatus', 'mNumber'
+  ];
+
+  var missingElements = REQUIRED_DOM.filter(function (id) {
+    return !document.getElementById(id);
+  });
+
+  if (missingElements.length) {
+    CJ.__appReported = true;
+    showFatal('Файл journal.html устарел.', [
+      'В нём нет элементов, которые нужны логике: <code>' +
+        missingElements.slice(0, 8).join(', ') +
+        (missingElements.length > 8 ? ' и ещё ' + (missingElements.length - 8) : '') + '</code>.',
+      'Скрипты обновились, а сама страница — нет. Обновите <b>journal.html</b> или возьмите ' +
+        '<b>journal-standalone.html</b>: там страница и скрипты всегда одной версии.'
+    ]);
+    return;
+  }
+
+  var missingCore = REQUIRED_CORE.filter(function (k) { return CJ[k] === undefined; });
+  if (missingCore.length) {
+    CJ.__appReported = true;
+    showFatal('Файлы журнала разных версий.', [
+      'В <b>journal-core.js</b> не хватает: <code>' + missingCore.slice(0, 8).join(', ') +
+        (missingCore.length > 8 ? ' и ещё ' + (missingCore.length - 8) : '') + '</code>.',
+      'Скорее всего браузер держит в кэше старую копию файла. Обновите страницу с <b>Ctrl+F5</b> ' +
+        '(на Mac — Cmd+Shift+R).',
+      'Если не помогло — возьмите <b>journal-standalone.html</b>: он собирается целиком, ' +
+        'и его части разойтись не могут.'
+    ]);
+    return;
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var cur = null;          // запись, открытая в карточке
+  var curBase = '';        // снимок полей на момент открытия — чтобы отличать реальные правки
+  var toastTimer = null;
+
+  /* ---------- мелкие утилиты ---------- */
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function parseNum(v) {
+    var n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+
+  function money(v) { return CJ.money(v); }
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return fmtDate(iso) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function notify(msg, isErr) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  function statusPill(key) {
+    var s = CJ.statusInfo(key);
+    return '<span class="pill" style="background:' + s.color + '">' + esc(s.label) + '</span>';
+  }
+
+  function recTotal(r) {
+    if (r.totals && typeof r.totals.total === 'number' && r.totals.total) return r.totals.total;
+    return CJ.computeTotals(r.rows).total;
+  }
+
+  function matchesSearch(r, q) {
+    if (!q) return true;
+    var hay = [
+      r.number, r.createdBy, r.comment,
+      r.contractor && r.contractor.name,
+      r.contractor && r.contractor.full,
+      r.contractor && r.contractor.unp
+    ]
+      .concat((r.rows || []).map(function (x) { return x.label; }))
+      .concat((r.rooms || []).map(function (x) { return x.name; }))
+      .concat((r.comments || []).map(function (c) { return c.text; }))
+      .join(' ').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  }
+
+  /* Период считается по дате создания записи */
+  function inPeriod(iso, period) {
+    if (!period) return true;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return false;
+    var now = new Date();
+    if (period === 'today') {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    if (period === 'week') {
+      return d.getTime() >= now.getTime() - 7 * 86400000;
+    }
+    if (period === 'month') {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    if (period === 'prev-month') {
+      var pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return d.getFullYear() === pm.getFullYear() && d.getMonth() === pm.getMonth();
+    }
+    if (period === 'year') {
+      return d.getFullYear() === now.getFullYear();
+    }
+    return true;
+  }
+
+  /* ---------- статистика ---------- */
+
+  function renderStats() {
+    var s = CJ.summary();
+    var el = $('stats');
+    el.innerHTML =
+      '<div class="stat"><div class="lb">Записей</div><div class="vl">' + s.total + '</div></div>' +
+      '<div class="stat"><div class="lb">Сумма всего</div><div class="vl red">' + money(s.sum) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">Оплачено</div><div class="vl green">' + money(s.sumPaid) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">За этот месяц</div><div class="vl">' + money(s.sumMonth) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">Отправлено КП</div><div class="vl">' + (s.byStatus.sent || 0) + '</div></div>' +
+      '<div class="stat"><div class="lb">Выставлено счетов</div><div class="vl">' + (s.byStatus.invoiced || 0) + '</div></div>';
+  }
+
+  /* ---------- таблица ---------- */
+
+  function filteredSorted() {
+    var q = $('search').value.trim().toLowerCase();
+    var st = $('statusFilter').value;
+    var ser = $('seriesFilter').value;
+    var period = $('periodFilter').value;
+    var sort = $('sortFilter').value;
+
+    var list = CJ.all().filter(function (r) {
+      if (st && r.status !== st) return false;
+      if (ser && r.series !== ser) return false;
+      if (!inPeriod(r.createdAt, period)) return false;
+      return matchesSearch(r, q);
+    });
+
+    list.sort(function (a, b) {
+      switch (sort) {
+        case 'date-asc': return String(a.createdAt).localeCompare(String(b.createdAt));
+        case 'sum-desc': return recTotal(b) - recTotal(a);
+        case 'sum-asc': return recTotal(a) - recTotal(b);
+        case 'number-desc': return CJ.parseSeq(b.number) - CJ.parseSeq(a.number);
+        default: return String(b.createdAt).localeCompare(String(a.createdAt));
+      }
+    });
+    return list;
+  }
+
+  function renderTable() {
+    var list = filteredSorted();
+    var body = $('recsBody');
+    var empty = $('emptyState');
+
+    if (!list.length) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      empty.innerHTML = CJ.all().length
+        ? '<b>🔍</b>Ничего не найдено по текущему фильтру.'
+        : '<b>📒</b>Журнал пуст.<br>Нажмите «＋ Новый счёт» или «🧮 Калькулятор → КП», чтобы создать первую запись.';
+      return;
+    }
+    empty.style.display = 'none';
+
+    body.innerHTML = list.map(function (r) {
+      var c = r.contractor || {};
+      var name = c.name ? esc(c.name)
+               : (c.full ? esc(c.full)
+               : '<span style="color:#c0c8d2">контрагент не указан</span>');
+      var cmt = r.comment ? '<div class="muted" style="font-weight:400;font-size:11.5px;color:#b0b8c2">' + esc(r.comment) + '</div>' : '';
+      var typeTag = r.series === 'kp' ? ' <span style="font-size:10px;color:#9aa1ac;font-weight:800">КП</span>' : '';
+      return '<tr data-id="' + esc(r.id) + '">' +
+        '<td class="numb">' + esc(r.number || '—') + typeTag + '</td>' +
+        '<td class="muted">' + fmtDate(r.createdAt) + '</td>' +
+        '<td>' + name + cmt + '</td>' +
+        '<td class="num">' + money(recTotal(r)) + '</td>' +
+        '<td>' + statusPill(r.status) + '</td>' +
+        '<td class="muted">' + esc(r.createdBy || '—') + '</td>' +
+        '<td><div class="acts">' +
+          '<button type="button" data-act="open" title="Открыть карточку">📂</button>' +
+          '<button type="button" data-act="i5" title="Открыть в счёте (i5)">📄</button>' +
+          '<button type="button" data-act="dup" title="Копировать запись">📋</button>' +
+          '<button type="button" data-act="del" title="Удалить">✕</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function render() {
+    renderStats();
+    renderTable();
+    updateBackupWarn();
+  }
+
+  /* ---------- карточка записи ---------- */
+
+  function fillStatusSelect() {
+    $('mStatus').innerHTML = CJ.STATUSES.map(function (s) {
+      return '<option value="' + s.key + '">' + esc(s.label) + '</option>';
+    }).join('');
+  }
+
+  var C_FIELDS = ['name', 'full', 'unp', 'addr', 'account', 'bank', 'bic', 'position', 'fio', 'basis', 'phone', 'email'];
+
+  function openRecord(id) {
+    var rec = CJ.get(id);
+    if (!rec) { notify('Запись не найдена', true); return; }
+    cur = JSON.parse(JSON.stringify(rec));
+
+    $('mTitle').textContent = (cur.series === 'kp' ? 'КП ' : 'Счёт ') + (cur.number || '—');
+    $('mSub').textContent = 'Создано ' + fmtDateTime(cur.createdAt) + ' · изменено ' + fmtDateTime(cur.updatedAt) +
+      (cur.rooms && cur.rooms.length ? ' · помещений: ' + cur.rooms.length : '');
+    $('mStatus').value = cur.status;
+    $('mNumber').value = cur.number || '';
+    $('mCreated').value = fmtDateTime(cur.createdAt);
+    $('mUpdated').value = fmtDateTime(cur.updatedAt);
+    $('mManager').value = cur.createdBy || '';
+
+    C_FIELDS.forEach(function (f) { $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value = (cur.contractor && cur.contractor[f]) || ''; });
+
+    $('dDelivery').value = (cur.deal && cur.deal.delivery) || 'pickup';
+    $('dPayment').value = cur.deal ? cur.deal.payment : 100;
+    $('dDays').value = cur.deal ? cur.deal.days : 3;
+    $('dAddress').value = (cur.deal && cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+
+    $('mComment').value = cur.comment || '';
+
+    renderRows();
+    renderComments();
+    renderClientLink();
+    showOpens(cur.id);
+    renderHistory();
+
+    /* Базовый снимок берём ПОСЛЕ нормализации формы, иначе первое же
+       закрытие карточки выглядело бы как изменение. */
+    collect();
+    curBase = comparable(cur);
+
+    $('recModal').classList.add('open');
+  }
+
+  /* Открывал ли клиент отправленное КП — ответ асинхронный,
+     поэтому подписываем карточку, когда он придёт. */
+  var opensSeq = 0;
+  function showOpens(recordId) {
+    var my = ++opensSeq;
+    if (!recordId || !cur || !cur.client || !cur.client.url) return;
+    CJ.fetchOpens(recordId).then(function (data) {
+      if (my !== opensSeq || !data || !cur || cur.id !== recordId) return;
+      var base = $('mSub').textContent.replace(/ · КП (ещё не открывали|открывали).*$/, '');
+      if (!data.count) {
+        $('mSub').textContent = base + ' · КП ещё не открывали';
+      } else {
+        $('mSub').textContent = base + ' · КП открывали ' + data.count +
+          ' ' + declOfNum(data.count, ['раз', 'раза', 'раз']) + ', последний — ' + fmtDateTime(data.last);
+      }
+    });
+  }
+
+  function declOfNum(n, forms) {
+    n = Math.abs(n) % 100;
+    var n1 = n % 10;
+    if (n > 10 && n < 20) return forms[2];
+    if (n1 > 1 && n1 < 5) return forms[1];
+    if (n1 === 1) return forms[0];
+    return forms[2];
+  }
+
+  function closeRecord() {
+    $('recModal').classList.remove('open');
+    cur = null;
+    render();
+  }
+
+  function renderRows() {
+    var body = $('rowsBody');
+    body.innerHTML = (cur.rows || []).map(function (r, i) {
+      var qty = CJ.rowQty(r);
+      var sum = qty * CJ.num(r.price);
+      var withVat = sum * 1.2;
+      return '<tr data-idx="' + i + '">' +
+        '<td><input type="text" data-f="label" value="' + esc(r.label) + '"></td>' +
+        '<td><input type="text" class="r" data-f="qtyCalc" value="' + String(CJ.num(r.qtyCalc)).replace('.', ',') + '"></td>' +
+        '<td><input type="text" class="r" data-f="qtyReserve" value="' + String(CJ.num(r.qtyReserve)).replace('.', ',') + '"></td>' +
+        '<td><input type="text" data-f="unit" value="' + esc(r.unit || 'шт.') + '"></td>' +
+        '<td><input type="text" class="r" data-f="price" value="' + String(CJ.num(r.price)).replace('.', ',') + '"></td>' +
+        '<td class="calc">' + money(withVat) + '</td>' +
+        '<td><button type="button" class="del" data-del="' + i + '" title="Удалить позицию">✕</button></td>' +
+      '</tr>';
+    }).join('');
+    updateTotals();
+  }
+
+  function updateTotals() {
+    var t = CJ.computeTotals(cur.rows);
+    cur.totals = t;
+    $('tSubtotal').textContent = money(t.subtotal);
+    $('tVat').textContent = money(t.vat);
+    $('tTotal').textContent = money(t.total);
+  }
+
+  function renderComments() {
+    var el = $('commentsList');
+    var list = cur.comments || [];
+    if (!list.length) {
+      el.innerHTML = '<div class="hintline">Комментариев пока нет.</div>';
+      return;
+    }
+    el.innerHTML = list.slice().reverse().map(function (c) {
+      return '<div class="cmt"><div class="h">' + esc(c.by || '—') + ' · ' + fmtDateTime(c.at) + '</div>' + esc(c.text) + '</div>';
+    }).join('');
+  }
+
+  function renderClientLink() {
+    var w = $('clientLinkWrap');
+    var url = (cur.client && cur.client.url) || '';
+    if (!url) { w.style.display = 'none'; return; }
+    w.style.display = 'flex';
+    $('clientUrl').value = url;
+    $('btnOpenUrl').href = url;
+  }
+
+  /* Собираем данные формы обратно в cur */
+  function collect() {
+    cur.status = $('mStatus').value;
+    cur.number = $('mNumber').value.trim();
+    cur.createdBy = $('mManager').value.trim() || CJ.manager();
+    cur.comment = $('mComment').value.trim();
+
+    cur.contractor = cur.contractor || {};
+    C_FIELDS.forEach(function (f) { cur.contractor[f] = $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value.trim(); });
+
+    cur.deal = cur.deal || {};
+    cur.deal.delivery = $('dDelivery').value;
+    cur.deal.payment = CJ.num($('dPayment').value, 100);
+    cur.deal.days = CJ.num($('dDays').value, 3);
+    cur.deal.deliveryData = cur.deal.deliveryData || {};
+    cur.deal.deliveryData.address = $('dAddress').value.trim();
+
+    cur.totals = CJ.computeTotals(cur.rows);
+    return cur;
+  }
+
+  function saveCurrent(silent) {
+    if (!cur) return null;
+    collect();
+    if (!cur.number) cur.number = CJ.nextNumber(cur.series);
+    /* В историю пишем только когда менеджер действительно что-то изменил.
+       Иначе каждое открытие карточки добавляло бы запись «изменено». */
+    if (comparable(cur) !== curBase) {
+      CJ.addHistory(cur, 'edited');
+      curBase = comparable(cur);
+    }
+    var saved = CJ.save(cur, { assignNumber: false });
+    if (!silent && saved) notify('✓ Сохранено: ' + cur.number);
+    return saved;
+  }
+
+  /* Снимок полей, которые менеджер может изменить.
+     Служебные (updatedAt, history) сюда не входят — они меняются всегда. */
+  function comparable(r) {
+    return JSON.stringify({
+      number: r.number, status: r.status, createdBy: r.createdBy, comment: r.comment,
+      contractor: r.contractor || null, deal: r.deal || null,
+      rows: r.rows || [], comments: r.comments || []
+    });
+  }
+
+  function historyLabel(action) {
+    var a = String(action == null ? '' : action);
+    if (a === 'created') return 'Создан';
+    if (a === 'edited') return 'Изменён';
+    if (a === 'from calculator') return 'Создан из калькулятора';
+    if (a === 'new invoice from journal') return 'Создан новый счёт из журнала';
+    if (a === 'created (демо)') return 'Создан (демо-данные)';
+    var m = a.match(/^duplicated from (.+)$/);
+    if (m) return 'Скопирован из ' + m[1];
+    var m2 = a.match(/^number reassigned to (.+)$/);
+    if (m2) return 'Номер изменён на ' + m2[1];
+    if (/^client link:/.test(a)) return 'Отправлена ссылка клиенту';
+    return a || 'Изменение';
+  }
+
+  function renderHistory() {
+    var el = $('historyList');
+    if (!el) return;
+    var list = (cur.history || []).slice().reverse();
+    if (!list.length) {
+      el.innerHTML = '<div class="hintline">Изменений пока не было.</div>';
+      return;
+    }
+    el.innerHTML = list.map(function (h) {
+      return '<div class="cmt"><div class="h">' + fmtDateTime(h.at) + ' · ' + esc(h.by || '—') + '</div>' +
+        esc(historyLabel(h.action)) + '</div>';
+    }).join('');
+  }
+
+  /* ---------- массовые действия ---------- */
+
+  function actionOpenI5(rec) {
+    var url = CJ.i5UrlForRecord(rec);
+    window.open(url, '_blank');
+    notify('Открываю i5 по записи ' + (rec.number || rec.id));
+  }
+
+  function actionSendKp(rec) {
+    if (!rec.rows || !rec.rows.length) {
+      if (!confirm('В записи нет позиций. Сформировать ссылку всё равно?\n\nВ КП не будет спецификации.')) return;
+    }
+    notify('Формирую ссылку для клиента…');
+    CJ.sendKpToClient(rec).then(function (url) {
+      if (cur && cur.id === rec.id) { cur = JSON.parse(JSON.stringify(CJ.get(rec.id))); renderClientLink(); showOpens(cur.id); }
+      render();
+      notify('✓ Ссылка готова — скопируйте и отправьте клиенту');
+      copyText(url);
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось создать ссылку: ' + e.message, true);
+    });
+  }
+
+  function actionDuplicate(rec) {
+    var done = function (copy) {
+      if (!copy) { notify('Не удалось скопировать', true); return; }
+      render();
+      notify('✓ Создана копия: ' + copy.number);
+      openRecord(copy.id);
+    };
+
+    /* В общем журнале номер для копии должен выдать сервер,
+       иначе два менеджера получат одинаковый номер. */
+    if (CJ.isApi() && CJ.duplicateReserved) {
+      notify('Запрашиваю номер для копии…');
+      CJ.duplicateReserved(rec.id).then(done).catch(function (e) {
+        notify('Не удалось скопировать: ' + e.message, true);
+      });
+      return;
+    }
+    done(CJ.duplicate(rec.id));
+  }
+
+  function actionDelete(rec) {
+    if (!confirm('Удалить запись ' + (rec.number || rec.id) + '?\n\nДействие необратимо.')) return;
+    if (!CJ.remove(rec.id)) {
+      notify('Удалить не удалось — изменения не сохранены', true);
+      return;
+    }
+    if (cur && cur.id === rec.id) { $('recModal').classList.remove('open'); cur = null; }
+    render();
+    notify('Запись удалена');
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+
+  /* ---------- новые записи ---------- */
+
+  function createInvoice() {
+    /* Локальный режим: номер берём синхронно, чтобы window.open остался
+       внутри жеста пользователя и не попал под блокировку всплывающих окон. */
+    if (!CJ.isApi()) {
+      var rec = CJ.create({ series: 'invoice' });
+      rec.number = CJ.nextNumber('invoice');
+      rec.history.push({ at: CJ.nowISO(), by: CJ.manager(), action: 'new invoice from journal' });
+      CJ.save(rec, { assignNumber: false });
+      render();
+      notify('Создан ' + rec.number + ' — открываю i5');
+      window.open(CJ.i5UrlForRecord(rec), '_blank');
+      return;
+    }
+
+    /* Серверный режим: номер выдаёт база одной транзакцией — дубли исключены. */
+    notify('Запрашиваю номер на сервере…');
+    CJ.createReserved('invoice').then(function (rec) {
+      CJ.addHistory(rec, 'new invoice from journal');
+      CJ.save(rec, { assignNumber: false });
+      render();
+      notify('Создан ' + rec.number + ' — открываю i5');
+      window.open(CJ.i5UrlForRecord(rec), '_blank');
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось создать счёт: ' + e.message, true);
+    });
+  }
+
+  function openCalculator() {
+    var url = CJ.calcUrlForRecord(null);
+    if (!confirm('Открыть калькулятор CUBICA?\n\n' + url + '\n\nЕсли адрес неверный — поменяйте его в «Настройках».\nПродолжить?')) return;
+    window.open(url, '_blank');
+  }
+
+  /* ---------- экспорт / импорт ---------- */
+
+  var BACKUP_REMIND_DAYS = 7;
+
+  function exportJson() {
+    var data = CJ.exportJSON();
+    if (!data.records.length) { notify('Журнал пуст', true); return; }
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'cubica_journal_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    CJ.saveSettings({ lastExportAt: CJ.nowISO() });
+    updateBackupWarn();
+    notify('Экспортировано записей: ' + data.records.length);
+  }
+
+  /* В локальном режиме журнал живёт только в этом браузере: очистка данных
+     браузера или сброс профиля уничтожат его безвозвратно. Напоминаем. */
+  function updateBackupWarn() {
+    var el = $('backupWarn');
+    if (!el) return;
+    var s = CJ.settings();
+    var count = CJ.all().length;
+    if (s.mode === 'api' || !count) { el.classList.remove('show'); return; }
+
+    var last = s.lastExportAt ? new Date(s.lastExportAt) : null;
+    var days = last && !isNaN(last.getTime())
+      ? Math.floor((Date.now() - last.getTime()) / 86400000)
+      : null;
+
+    if (days !== null && days < BACKUP_REMIND_DAYS) { el.classList.remove('show'); return; }
+
+    $('backupText').textContent = last
+      ? 'Журнал хранится только в этом браузере. Последняя копия — ' + days +
+        ' ' + declOfNum(days, ['день', 'дня', 'дней']) + ' назад, записей: ' + count + '.'
+      : 'Журнал хранится только в этом браузере и нигде больше. Записей: ' + count +
+        '. Если очистить данные браузера, журнал пропадёт — скачайте копию.';
+    el.classList.add('show');
+  }
+
+  function importJson(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try {
+        data = JSON.parse(reader.result);
+      } catch (e) {
+        notify('Не удалось прочитать файл: это не корректный JSON', true);
+        return;
+      }
+      var incoming = Array.isArray(data) ? data : (data && data.records);
+      if (!Array.isArray(incoming)) {
+        notify('В файле нет списка записей', true);
+        return;
+      }
+
+      /* Если журнал не пуст — спрашиваем, добавить или восстановить целиком.
+         Для восстановления из копии нужен именно второй вариант. */
+      var current = CJ.all().length;
+      var replace = false;
+      if (current) {
+        replace = confirm(
+          'В файле записей: ' + incoming.length + ', в журнале сейчас: ' + current + '.\n\n' +
+          'ОК — ЗАМЕНИТЬ журнал содержимым файла (восстановление из копии).\n' +
+          'Отмена — добавить и обновить записи из файла, остальное оставить как есть.'
+        );
+      }
+
+      try {
+        var res = CJ.importJSON(data, { replace: replace });
+        render();
+        var parts = ['добавлено ' + res.added, 'обновлено ' + res.updated];
+        if (replace) parts.push('журнал заменён');
+        if (res.removed) parts.push('удалено ' + res.removed);
+        notify('Импорт: ' + parts.join(', '));
+        if (replace && res.pushed) {
+          notify('Восстановлено и отправлено на сервер: ' + res.pushed, false);
+        }
+        updateBackupWarn();
+      } catch (e) {
+        notify('Ошибка импорта: ' + e.message, true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- самопроверка ----------
+     Прогоняет те же операции, что и обычная работа: запись в хранилище,
+     создание, номер, итоги, показ в таблице, удаление. Нужна, чтобы
+     «записи не появляются» превращалось в конкретный ответ без консоли. */
+
+  function runSelfCheck() {
+    var steps = [];
+
+    function step(name, fn) {
+      try {
+        steps.push({ name: name, ok: true, detail: fn() || '' });
+      } catch (e) {
+        /* Для ошибок хранилища важен именно тип: SecurityError — запрет,
+           QuotaExceededError — кончилось место. Это разные советы. */
+        var detail = (e && e.message) || String(e);
+        if (e && e.name && e.name !== 'Error') detail = e.name + ' — ' + detail;
+        steps.push({ name: name, ok: false, detail: detail });
+      }
+    }
+
+    var probe = 'cubica_selftest_probe';
+
+    step('Локальное хранилище браузера', function () {
+      localStorage.setItem(probe, 'ok');
+      var back = localStorage.getItem(probe);
+      localStorage.removeItem(probe);
+      if (back !== 'ok') throw new Error('прочитано не то, что записано');
+      return 'запись и чтение работают';
+    });
+
+    var testId = null;
+
+    step('Создание записи', function () {
+      var rec = CJ.create({ series: 'invoice' });
+      rec.contractor.name = 'Проверка журнала (удаляется сразу)';
+      rec.comment = 'служебная запись самопроверки';
+      var saved = CJ.save(rec, { assignNumber: false, localOnly: true });
+      if (!saved) throw new Error('запись не сохранилась в хранилище');
+      testId = saved.id;
+      if (!CJ.get(testId)) throw new Error('запись не читается обратно');
+      return 'сохранена как ' + saved.number;
+    });
+
+    step('Присвоение номера', function () {
+      var n = CJ.nextNumber('invoice');
+      if (!n) throw new Error('номер не выдан');
+      return 'следующий номер: ' + n;
+    });
+
+    step('Расчёт итогов', function () {
+      var t = CJ.computeTotals([{ label: 'проба', qtyCalc: 2, qtyReserve: 0, unit: 'шт.', price: 10 }]);
+      if (Math.abs(t.total - 24) > 0.001) throw new Error('ожидалось 24,00, получено ' + t.total);
+      return 'НДС 20 % считается верно';
+    });
+
+    step('Показ в списке', function () {
+      if (!testId) throw new Error('запись не создана — смотреть выше');
+      /* Временно снимаем фильтры, иначе тестовая запись может быть скрыта */
+      var saved = {
+        search: $('search').value, status: $('statusFilter').value,
+        series: $('seriesFilter').value, period: $('periodFilter').value
+      };
+      $('search').value = ''; $('statusFilter').value = '';
+      $('seriesFilter').value = ''; $('periodFilter').value = '';
+      var shown = false;
+      try {
+        renderTable();
+        shown = $('recsBody').innerHTML.indexOf(testId) >= 0;
+      } finally {
+        $('search').value = saved.search; $('statusFilter').value = saved.status;
+        $('seriesFilter').value = saved.series; $('periodFilter').value = saved.period;
+        renderTable();
+      }
+      if (!shown) throw new Error('запись не появилась в таблице');
+      return 'запись видна в таблице';
+    });
+
+    step('Удаление', function () {
+      if (!testId) throw new Error('нечего удалять');
+      if (!CJ.remove(testId)) throw new Error('не удалилось');
+      if (CJ.get(testId)) throw new Error('запись осталась в журнале');
+      render();
+      return 'служебная запись убрана';
+    });
+
+    var ok = steps.every(function (s) { return s.ok; });
+    renderSelfCheck(steps, ok);
+    return { ok: ok, steps: steps };
+  }
+
+  function renderSelfCheck(steps, ok) {
+    var host = document.querySelector('.wrap');
+    if (!host) return;
+    var old = host.querySelector('[data-selfcheck]');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    var box = document.createElement('div');
+    box.setAttribute('data-selfcheck', ok ? 'ok' : 'fail');
+    box.style.cssText = 'margin:0 0 16px;padding:16px 18px;border:2px solid ' +
+      (ok ? '#2e7d32' : '#c00000') + ';border-radius:12px;background:' +
+      (ok ? '#f1f8e9' : '#fff5f5') + ';color:' + (ok ? '#1b5e20' : '#7a0000') +
+      ';font-size:13.5px;line-height:1.6';
+    box.innerHTML = '<b>' +
+      (ok ? 'Журнал исправен — все проверки пройдены.'
+          : 'Журнал работает не полностью — смотрите отметки ниже.') +
+      '</b><ul style="margin:8px 0 0 18px;padding:0">' +
+      steps.map(function (s) {
+        return '<li style="margin-bottom:4px">' + (s.ok ? '✅' : '❌') + ' ' + esc(s.name) +
+          (s.detail ? ' — ' + esc(s.detail) : '') + '</li>';
+      }).join('') + '</ul>' +
+      (ok ? '' : '<div style="margin-top:8px">Пришлите этот список разработчику — по нему причина видна сразу.</div>');
+    host.insertBefore(box, host.firstChild);
+    return box;
+  }
+
+  /* ---------- настройки ---------- */
+
+  function fillSettings() {
+    var s = CJ.settings();
+    $('sManager').value = s.manager || '';
+    $('sVat').value = Math.round(CJ.num(s.vatRate, 0.2) * 100);
+    $('sYearReset').value = s.yearReset ? '1' : '0';
+    $('sMode').value = s.mode || 'local';
+    $('sFmtInvoice').value = (s.numberFormat && s.numberFormat.invoice) || '';
+    $('sFmtKp').value = (s.numberFormat && s.numberFormat.kp) || '';
+    $('sUrlCalc').value = s.urls.calc || '';
+    $('sUrlI5').value = s.urls.i5 || '';
+    $('sUrlKp').value = s.urls.kp || '';
+    $('sApiBase').value = s.apiBase || '';
+    $('sApiToken').value = s.apiToken || '';
+  }
+
+  function saveSettingsFromForm() {
+    CJ.saveSettings({
+      manager: $('sManager').value.trim() || 'Менеджер',
+      vatRate: CJ.num($('sVat').value, 20) / 100,
+      yearReset: $('sYearReset').value === '1',
+      mode: $('sMode').value,
+      numberFormat: { invoice: $('sFmtInvoice').value.trim(), kp: $('sFmtKp').value.trim() },
+      urls: {
+        calc: $('sUrlCalc').value.trim(),
+        i5: $('sUrlI5').value.trim(),
+        kp: $('sUrlKp').value.trim()
+      },
+      apiBase: $('sApiBase').value.trim(),
+      apiToken: $('sApiToken').value.trim()
+    });
+    $('mgrInput').value = CJ.manager();
+    applyModeBadge();
+    render();
+    afterModeChange();
+    notify('✓ Настройки сохранены');
+  }
+
+  /* После смены режима — подтянуть данные и показать/скрыть кнопку синхронизации */
+  function afterModeChange() {
+    if (!CJ.isApi()) return;
+    doSync(true);
+  }
+
+  function doSync(silent) {
+    if (!CJ.isApi()) { if (!silent) notify('Журнал работает локально — синхронизировать нечего'); return; }
+    $('btnSync').textContent = '⟳ Синхронизация…';
+    $('btnSync').disabled = true;
+    CJ.sync().then(function (records) {
+      render();
+      if (!silent) notify('✓ Синхронизировано записей: ' + records.length);
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось связаться с сервером: ' + e.message, true);
+    }).then(function () {
+      $('btnSync').textContent = '⟳ Синхронизировать';
+      $('btnSync').disabled = false;
+    });
+  }
+
+  function applyModeBadge() {
+    var s = CJ.settings();
+    var b = $('modeBadge');
+    var api = s.mode === 'api';
+    b.classList.toggle('api', api);
+    b.textContent = api ? 'Хранилище: сервер' : 'Хранилище: локально';
+    $('localWarn').classList.toggle('show', !api);
+    $('btnSync').style.display = api ? 'inline-flex' : 'none';
+  }
+
+  /* ---------- события ---------- */
+
+  function bind() {
+    $('mgrInput').addEventListener('change', function () {
+      CJ.saveSettings({ manager: this.value.trim() || 'Менеджер' });
+      this.value = CJ.manager();
+      notify('Менеджер: ' + CJ.manager());
+    });
+
+    $('btnNewInvoice').addEventListener('click', createInvoice);
+    $('btnNewKp').addEventListener('click', openCalculator);
+    $('btnExport').addEventListener('click', exportJson);
+    $('btnImport').addEventListener('click', function () { $('importFile').click(); });
+    $('importFile').addEventListener('change', function () {
+      if (this.files && this.files[0]) importJson(this.files[0]);
+      this.value = '';
+    });
+    $('btnSettings').addEventListener('click', function () {
+      fillSettings();
+      $('setModal').classList.add('open');
+    });
+    $('btnSync').addEventListener('click', function () { doSync(false); });
+    $('btnSelfCheck').addEventListener('click', function () {
+      var res = runSelfCheck();
+      notify(res.ok ? '✓ Проверка пройдена' : 'Проверка нашла проблемы — смотрите список', !res.ok);
+    });
+    $('btnBackupNow').addEventListener('click', exportJson);
+    $('btnSetSave').addEventListener('click', function () { saveSettingsFromForm(); $('setModal').classList.remove('open'); });
+    $('btnSetClose').addEventListener('click', function () { $('setModal').classList.remove('open'); });
+    $('btnResetSettings').addEventListener('click', function () {
+      if (!confirm('Сбросить настройки к значениям по умолчанию?')) return;
+      try { localStorage.removeItem('cubica_journal_settings_v1'); } catch (e) {}
+      fillSettings();
+      $('mgrInput').value = CJ.manager();
+      applyModeBadge();
+      notify('Настройки сброшены');
+    });
+
+    ['search', 'statusFilter', 'seriesFilter', 'periodFilter', 'sortFilter'].forEach(function (id) {
+      $(id).addEventListener('input', renderTable);
+      $(id).addEventListener('change', renderTable);
+    });
+
+    // таблица: клик по строке и по кнопкам действий
+    $('recsBody').addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      var rec = CJ.get(tr.getAttribute('data-id'));
+      if (!rec) return;
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) { openRecord(rec.id); return; }
+      var act = btn.getAttribute('data-act');
+      if (act === 'open') openRecord(rec.id);
+      else if (act === 'i5') actionOpenI5(rec);
+      else if (act === 'dup') actionDuplicate(rec);
+      else if (act === 'del') actionDelete(rec);
+    });
+
+    // карточка: позиции
+    $('rowsBody').addEventListener('input', function (e) {
+      var inp = e.target.closest('input[data-f]');
+      if (!inp || !cur) return;
+      var idx = parseInt(inp.closest('tr').getAttribute('data-idx'), 10);
+      var f = inp.getAttribute('data-f');
+      var row = cur.rows[idx];
+      if (!row) return;
+      if (f === 'label' || f === 'unit') row[f] = inp.value;
+      else row[f] = parseNum(inp.value);
+      if (f !== 'label' && f !== 'unit') {
+        var tr = inp.closest('tr');
+        var qty = CJ.rowQty(row);
+        tr.querySelector('.calc').textContent = money(qty * CJ.num(row.price) * 1.2);
+      }
+      updateTotals();
+    });
+
+    $('rowsBody').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-del]');
+      if (!b || !cur) return;
+      cur.rows.splice(parseInt(b.getAttribute('data-del'), 10), 1);
+      renderRows();
+    });
+
+    $('btnAddRow').addEventListener('click', function () {
+      if (!cur) return;
+      cur.rows.push({ label: 'Новая позиция', qtyCalc: 1, qtyReserve: 0, unit: 'шт.', price: 0 });
+      renderRows();
+      var inputs = $('rowsBody').querySelectorAll('tr:last-child input');
+      if (inputs[0]) inputs[0].focus();
+    });
+
+    $('newComment').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || !cur) return;
+      var text = this.value.trim();
+      if (!text) return;
+      cur.comments = cur.comments || [];
+      cur.comments.push({ at: CJ.nowISO(), by: CJ.manager(), text: text });
+      this.value = '';
+      renderComments();
+      collect();
+      CJ.save(cur, { assignNumber: false });
+    });
+
+    $('mNumber').addEventListener('change', function () {
+      if (!cur) return;
+      var value = this.value.trim();
+      if (!value) return;
+      var dup = CJ.all().filter(function (r) { return r.number === value && r.id !== cur.id; });
+      if (dup.length) notify('Внимание: номер ' + value + ' уже используется', true);
+    });
+
+    $('mStatus').addEventListener('change', function () {
+      if (!cur) return;
+      collect();
+      CJ.save(cur, { assignNumber: false });
+      render();
+    });
+
+    $('btnOpenI5').addEventListener('click', function () { if (cur) { saveCurrent(true); actionOpenI5(cur); } });
+    $('btnKpLink').addEventListener('click', function () { if (cur) { saveCurrent(true); actionSendKp(cur); } });
+    $('btnDup').addEventListener('click', function () { if (cur) { saveCurrent(true); actionDuplicate(cur); } });
+    $('btnDel').addEventListener('click', function () { if (cur) actionDelete(cur); });
+    $('btnClose').addEventListener('click', function () {
+      if (cur) saveCurrent(true);
+      closeRecord();
+    });
+    $('btnSaveClose').addEventListener('click', function () { saveCurrent(); closeRecord(); });
+    $('btnCopyUrl').addEventListener('click', function () {
+      copyText($('clientUrl').value);
+      notify('Ссылка скопирована');
+    });
+
+    // закрытие модалок
+    ['recModal', 'setModal'].forEach(function (id) {
+      $(id).addEventListener('click', function (e) {
+        if (e.target === this) {
+          if (id === 'recModal' && cur) saveCurrent(true);
+          this.classList.remove('open');
+          if (id === 'recModal') { cur = null; render(); }
+        }
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if ($('recModal').classList.contains('open')) { if (cur) saveCurrent(true); $('recModal').classList.remove('open'); cur = null; render(); }
+      else if ($('setModal').classList.contains('open')) $('setModal').classList.remove('open');
+    });
+
+    // синхронизация между вкладками
+    CJ.on('records-changed', function () {
+      if (!cur) render();
+      else renderStats();
+    });
+
+    // ошибка отправки на сервер — не молчим
+    CJ.on('sync-error', function (d) {
+      notify('Запись сохранена локально, но не ушла на сервер: ' + (d.error && d.error.message || 'ошибка'), true);
+    });
+
+    /* Место в хранилище браузера кончилось: запись НЕ сохранена.
+       Молчать нельзя — иначе менеджер будет уверен, что всё записано. */
+    CJ.on('storage-error', function () {
+      notify('В браузере закончилось место — изменения НЕ сохранены. Скачайте копию и удалите старые записи.', true);
+    });
+
+    /* Номер оказался занят: ядро уже запросило новый у сервера,
+       менеджеру сообщаем, что произошло. */
+    CJ.on('number-conflict', function (d) {
+      console.warn('[журнал] номер занят:', d.number);
+    });
+    CJ.on('number-reassigned', function (d) {
+      notify('Номер был занят — записи присвоен ' + d.number);
+      if (cur && cur.id === d.id) {
+        cur = JSON.parse(JSON.stringify(CJ.get(d.id)));
+        $('mNumber').value = cur.number;
+        renderHistory();
+        curBase = comparable(cur);
+      }
+      render();
+    });
+  }
+
+  /* ---------- старт ---------- */
+
+  function boot() {
+    fillStatusSelect();
+    fillSettings();
+    $('mgrInput').value = CJ.manager();
+    applyModeBadge();
+    $('statusFilter').innerHTML = '<option value="">Все статусы</option>' + CJ.STATUSES.map(function (s) {
+      return '<option value="' + s.key + '">' + esc(s.label) + '</option>';
+    }).join('');
+    bind();
+    render();
+
+    /* В серверном режиме сразу подтягиваем журнал с сервера */
+    if (CJ.isApi()) doSync(true);
+
+    // ?id=<recordId> — открыть карточку сразу (например, при возврате из i5)
+    var params = new URLSearchParams(location.search);
+    if (params.get('id') && CJ.get(params.get('id'))) openRecord(params.get('id'));
+
+    /* Отметка для страховочной проверки в journal.html:
+       если её нет, значит этот файл не загрузился или упал при запуске. */
+    CJ.__appStarted = true;
+    /* Доступ к самопроверке для тестов и для вызова из консоли */
+    CJ.__selfCheck = runSelfCheck;
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script>
+<script>
+/* Страховка. Если внешние скрипты не загрузились, страница выглядит
+   нормально, но пустой журнал ничего не объясняет. Пусть скажет сама. */
+(function () {
+  function show(kind, items) {
+    var host = document.querySelector('.wrap');
+    if (!host || !items.length) return;
+    var red = kind === 'error';
+    var box = document.createElement('div');
+    box.setAttribute('data-diagnostic', kind);
+    box.style.cssText =
+      'margin:0 0 16px;padding:16px 18px;border:2px solid ' + (red ? '#c00000' : '#e0b020') + ';' +
+      'border-radius:12px;background:' + (red ? '#fff5f5' : '#fffbe8') + ';' +
+      'color:' + (red ? '#7a0000' : '#6b4e00') + ';font-size:13.5px;line-height:1.6';
+    box.innerHTML = '<b>' + (red ? 'Журнал работает не полностью.' : 'Замечание.') + '</b>' +
+      '<ul style="margin:8px 0 0 18px;padding:0">' +
+      items.map(function (t) { return '<li style="margin-bottom:5px">' + t + '</li>'; }).join('') +
+      '</ul>';
+    host.insertBefore(box, host.firstChild);
+  }
+
+  function check() {
+    var errors = [], notes = [];
+    var isFile = location.protocol === 'file:';
+
+    if (!window.CubicaJournal) {
+      errors.push('Не найден файл <b>journal-core.js</b>.');
+    } else if (!window.CubicaJournal.__appStarted && !window.CubicaJournal.__appReported) {
+      errors.push('Не запустилась логика журнала (<b>journal-app.js</b>) — файл не найден или упал при запуске.');
+    }
+
+    if (errors.length) {
+      errors.push('Оба файла должны лежать <b>рядом</b> с journal.html и называться точно так же — регистр важен: ' +
+        '<code>journal-core.js</code>, <code>journal-app.js</code>.');
+      errors.push('Откройте консоль (F12 → Console): там видно, какой файл не загрузился и с какой ошибкой.');
+    } else {
+      try {
+        localStorage.setItem('__cubica_probe__', '1');
+        localStorage.removeItem('__cubica_probe__');
+      } catch (e) {
+        errors.push('Браузер запрещает запись в локальное хранилище (<code>' + ((e && e.name) || 'ошибка') + '</code>).');
+        errors.push('Записи будут создаваться, но не сохранятся: журнал опустеет после перезагрузки. ' +
+          'Мешают режим инкогнито и запрет сторонних cookie. Откройте журнал по адресу на GitHub Pages.');
+      }
+    }
+
+    if (isFile) {
+      notes.push('Журнал открыт <b>с диска</b> (file://). Работать он будет, но хранилище у него отдельное от версии на сайте: ' +
+        'записи, созданные здесь, не увидят страницы на GitHub Pages, и наоборот. Для общей работы открывайте журнал по адресу с сайта.');
+    }
+
+    if (errors.length) show('error', errors);
+    else show('note', notes);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', check);
+  else check();
+})();
+</script>
+</body>
+</html>
