@@ -1,6 +1,6 @@
 /* ============================================================
    CUBICA · Ядро журнала
-   Подключается на: журнал, i5, t6.3 (позже — kp)
+   Подключается на: журнал (index.html), i5, k6.3 (позже — kp)
    Публичный интерфейс: window.CubicaJournal
    ============================================================ */
 (function (global) {
@@ -20,7 +20,7 @@
     yearReset: true,
     urls: {
       journal: 'https://6471811-source.github.io/Cubica-journal/',
-      calc:    'https://6471811-source.github.io/Cubica-i5/',
+      calc:    'https://6471811-source.github.io/k6.3/',
       i5:      'https://6471811-source.github.io/Cubica-i5/',
       kp:      'https://6471811-source.github.io/cubica-kp/'
     },
@@ -486,6 +486,7 @@
     var s = loadSettings();
     var url = withParam(s.urls.i5, 'jid', rec.id);
     if (opts.autopdf) url = withParam(url, 'autopdf', '1');
+    if (opts.blank) url = withParam(url, 'blank', '1');
     return url;
   }
   function calcUrlForRecord(rec) {
