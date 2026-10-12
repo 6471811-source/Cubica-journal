@@ -1131,11 +1131,44 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       if ($('recModal').classList.contains('open')) { if (cur) saveCurrent(true); $('recModal').classList.remove('open'); cur = null; render(); }
       else if ($('setModal').classList.contains('open')) $('setModal').classList.remove('open');
     });
+CJ.on('records-changed', function (e) {
+  if (cur && e && e.external) {
+    var fresh = CJ.get(cur.id);
+    if (fresh) {
+      cur = JSON.parse(JSON.stringify(fresh));
 
-    CJ.on('records-changed', function () {
-      if (!cur) render();
-      else renderStats();
-    });
+      $('mNumber').value = cur.number || '';
+      $('mUpdated').value = fmtDateTime(cur.updatedAt);
+      $('mManager').value = cur.createdBy || '';
+
+      C_FIELDS.forEach(function (f) {
+        $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value =
+          (cur.contractor && cur.contractor[f]) || '';
+      });
+
+      if (cur.deal) {
+        $('dDelivery').value = cur.deal.delivery || 'pickup';
+        $('dPayment').value = cur.deal.payment != null ? cur.deal.payment : 100;
+        $('dDays').value = cur.deal.days != null ? cur.deal.days : 3;
+        $('dAddress').value = (cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+      }
+
+      $('mStatus').value = cur.status;
+      $('mComment').value = cur.comment || '';
+
+      renderRows();
+      renderComments();
+      renderHistory();
+      updateTotals();
+      curBase = comparable(cur);
+      notify('Данные обновлены из i5');
+    }
+  } else if (!cur) {
+    render();
+  } else {
+    renderStats();
+  }
+});
     CJ.on('sync-error', function (d) {
       notify('Запись сохранена локально, но не ушла на сервер', true);
     });
