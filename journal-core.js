@@ -502,29 +502,52 @@ rows: (rec.rows || []).map(function (r) {
   }
 
   function sendKpToClient(rec) {
-    var s = loadSettings();
-    var payload = buildClientPayload(rec);
-    var data = b64enc(JSON.stringify(payload));
-    return fetch(s.apiBase + '/save', {
+  var s = loadSettings();
+  var payload = buildClientPayload(rec);
+  var data = b64enc(JSON.stringify(payload));
+
+  /* Если у записи уже есть клиентская ссылка — обновляем её,
+     а не создаём новую. Иначе клиент, открыв старую ссылку,
+     не увидит обновления. */
+  if (rec.client && rec.client.token) {
+    return fetch(s.apiBase + '/update/' + encodeURIComponent(rec.client.token), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payload: data, recordId: rec.id })
+      body: JSON.stringify({ payload: data })
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
-    }).then(function (j) {
-      if (!j || !j.id) throw new Error('Сервис не вернул id');
-      rec.client = rec.client || {};
-      rec.client.token = j.id;
-      rec.client.url = kpUrlForToken(j.id);
+    }).then(function () {
       rec.client.sentAt = nowISO();
       if (rec.status === 'draft') rec.status = 'sent';
       rec.history = rec.history || [];
-      rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link created' });
+      rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link updated' });
       save(rec, { assignNumber: false });
       return rec.client.url;
     });
   }
+
+  /* Первый раз — создаём новую ссылку */
+  return fetch(s.apiBase + '/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload: data, recordId: rec.id })
+  }).then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function (j) {
+    if (!j || !j.id) throw new Error('Сервис не вернул id');
+    rec.client = rec.client || {};
+    rec.client.token = j.id;
+    rec.client.url = kpUrlForToken(j.id);
+    rec.client.sentAt = nowISO();
+    if (rec.status === 'draft') rec.status = 'sent';
+    rec.history = rec.history || [];
+    rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link created' });
+    save(rec, { assignNumber: false });
+    return rec.client.url;
+  });
+}
   function fetchOpens(recordId) {
     if (!recordId || !loadSettings().apiBase) return Promise.resolve(null);
     return apiFetch('/records/' + encodeURIComponent(recordId) + '/opens')
