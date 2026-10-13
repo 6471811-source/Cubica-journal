@@ -434,6 +434,8 @@
     var valid = new Date(); valid.setDate(valid.getDate() + 10);
     return {
       v: 6, rooms: rooms, i5_url: s.urls.i5,
+             paid: rec.status === 'paid',
+      paidAt: rec.status === 'paid' ? rec.updatedAt : null,
       L_in: num(meta.L_in || first.L_in),
       W_in: num(meta.W_in || first.W_in),
       area: num(meta.area) || rooms.reduce(function (a, r) { return a + num(r.areaM2); }, 0),
