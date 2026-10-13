@@ -714,7 +714,44 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       notify('Не удалось создать ссылку: ' + e.message, true);
     });
   }
+/* Обновляет содержимое уже сгенерированной ссылки клиента.
+   Используется когда счёт помечен «Оплачено» — раскрываем клиенту
+   детали раскроя (pieces), которые в обычном режиме скрыты. */
+function refreshClientPayload(rec) {
+  var CJ_local = window.CubicaJournal;
+  if (!CJ_local) return;
+  var token = rec.client && rec.client.token;
+  if (!token) { notify('У записи нет клиентской ссылки', true); return; }
 
+  var s = CJ_local.settings();
+  var apiBase = (s.apiBase || '').replace(/\/+$/, '');
+  if (!apiBase) { notify('Не задан адрес сервиса', true); return; }
+
+  /* Формируем payload так же, как при первой отправке,
+     но добавляем paid: true — kp это увидит и раскроет pieces */
+  var payload = CJ_local.buildClientPayload(rec);
+  payload.paid = true;
+  payload.paidAt = CJ_local.nowISO();
+
+  var data = CJ_local.b64enc(JSON.stringify(payload));
+
+  notify('Обновляю ссылку клиента…');
+  fetch(apiBase + '/update/' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ payload: data })
+  }).then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function () {
+    notify('✓ Ссылка клиента обновлена — раскрой раскрыт');
+    CJ_local.addHistory(rec, 'client link refreshed (paid)');
+    CJ_local.save(rec, { assignNumber: false });
+  }).catch(function (e) {
+    console.error(e);
+    notify('Не удалось обновить ссылку: ' + e.message, true);
+  });
+}
   function actionDuplicate(rec) {
     var done = function (copy) {
       if (!copy) { notify('Не удалось скопировать', true); return; }
@@ -1075,12 +1112,18 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       CJ.save(cur, { assignNumber: false });
     });
 
-    $('mStatus').addEventListener('change', function () {
-      if (!cur) return;
-      collect();
-      CJ.save(cur, { assignNumber: false });
-      render();
-    });
+$('mStatus').addEventListener('change', function () {
+  if (!cur) return;
+  var oldStatus = cur.status;
+  collect();
+  CJ.save(cur, { assignNumber: false });
+  render();
+  /* Если статус сменился на «Оплачено» и у записи есть клиентская ссылка —
+     обновляем payload в KV, чтобы клиент увидел раскрытый раскрой */
+  if (cur.status === 'paid' && oldStatus !== 'paid' && cur.client && cur.client.token) {
+    refreshClientPayload(cur);
+  }
+});
 
     $('btnOpenCalc').addEventListener('click', function () { if (cur) { saveCurrent(true); actionOpenCalc(cur); } });
     $('btnOpenI5').addEventListener('click', function () { if (cur) { saveCurrent(true); actionOpenI5(cur); } });
