@@ -120,10 +120,10 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     <button type="button" class="btn" id="btnSettings">⚙ Настройки</button>
   </div>
     <div class="warn" id="localWarn">
-    <b>Локальный режим.</b> Журнал хранится в этом браузере. Номера выдаются этим браузером:
-    если с журналом работают несколько менеджеров или несколько компьютеров, порядковые номера
-    могут совпасть, и каждый увидит только свои записи. Для общего журнала включите серверный
-    режим в «Настройках».
+    <b>Локальный режим.</b> Журнал хранится в этом браузере (localStorage домена <code>6471811-source.github.io</code>).
+    Номера выдаются этим браузером: если с журналом работают несколько менеджеров или несколько компьютеров,
+    порядковые номера могут совпасть, и каждый увидит только свои записи.
+    Для общего журнала включите серверный режим в «Настройках».
   </div>
 
   <div class="warn" id="backupWarn">
@@ -323,7 +323,9 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     </div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script src="https://6471811-source.github.io/Cubica-journal/journal-core.js"></script>
 <script>
 /* ============================================================
@@ -339,8 +341,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   var cur = null;
   var curBase = '';
   var toastTimer = null;
-
-  /* ---------- утилиты ---------- */
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -412,8 +412,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     return true;
   }
 
-  /* ---------- статистика ---------- */
-
   function renderStats() {
     var s = CJ.summary();
     var el = $('stats');
@@ -425,8 +423,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       '<div class="stat"><div class="lb">Отправлено КП</div><div class="vl">' + (s.byStatus.sent || 0) + '</div></div>' +
       '<div class="stat"><div class="lb">Выставлено счетов</div><div class="vl">' + (s.byStatus.invoiced || 0) + '</div></div>';
   }
-
-  /* ---------- таблица ---------- */
 
   function filteredSorted() {
     var q = $('search').value.trim().toLowerCase();
@@ -499,8 +495,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     renderTable();
     updateBackupWarn();
   }
-
-  /* ---------- карточка записи ---------- */
 
   function fillStatusSelect() {
     $('mStatus').innerHTML = CJ.STATUSES.map(function (s) {
@@ -693,8 +687,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     }).join('');
   }
 
-  /* ---------- массовые действия ---------- */
-
   function actionOpenI5(rec) {
     var url = CJ.i5UrlForRecord(rec);
     window.open(url, '_blank');
@@ -764,11 +756,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     }
   }
 
-  /* ---------- новые записи ---------- */
-
   function createInvoice() {
-    /* Создаём запись, чтобы номер закрепился, затем открываем i5 ПУСТЫМ
-       (?blank=1) — позиции менеджер заполнит руками. */
     var openBlank = function (rec) {
       var url = CJ.i5UrlForRecord(rec, { blank: true });
       window.open(url, '_blank');
@@ -803,8 +791,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     if (!confirm('Открыть калькулятор Кубота?\n\n' + url)) return;
     window.open(url, '_blank');
   }
-
-  /* ---------- экспорт / импорт ---------- */
 
   var BACKUP_REMIND_DAYS = 7;
 
@@ -879,8 +865,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     reader.readAsText(file);
   }
 
-  /* ---------- самопроверка ---------- */
-
   function runSelfCheck() {
     var steps = [];
     function step(name, fn) {
@@ -925,8 +909,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       steps.map(function (s) { return (s.ok ? '✓ ' : '✗ ') + s.name + (s.detail ? ' — ' + s.detail : ''); }).join('\n'));
     return { ok: ok, steps: steps };
   }
-
-  /* ---------- настройки ---------- */
 
   function fillSettings() {
     var s = CJ.settings();
@@ -995,8 +977,6 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     $('localWarn').classList.toggle('show', !api);
     $('btnSync').style.display = api ? 'inline-flex' : 'none';
   }
-
-  /* ---------- события ---------- */
 
   function bind() {
     $('mgrInput').addEventListener('change', function () {
@@ -1131,45 +1111,41 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       if ($('recModal').classList.contains('open')) { if (cur) saveCurrent(true); $('recModal').classList.remove('open'); cur = null; render(); }
       else if ($('setModal').classList.contains('open')) $('setModal').classList.remove('open');
     });
-CJ.on('records-changed', function (e) {
-  if (cur && e && e.external) {
-    var fresh = CJ.get(cur.id);
-    if (fresh) {
-      cur = JSON.parse(JSON.stringify(fresh));
 
-      $('mNumber').value = cur.number || '';
-      $('mUpdated').value = fmtDateTime(cur.updatedAt);
-      $('mManager').value = cur.createdBy || '';
-
-      C_FIELDS.forEach(function (f) {
-        $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value =
-          (cur.contractor && cur.contractor[f]) || '';
-      });
-
-      if (cur.deal) {
-        $('dDelivery').value = cur.deal.delivery || 'pickup';
-        $('dPayment').value = cur.deal.payment != null ? cur.deal.payment : 100;
-        $('dDays').value = cur.deal.days != null ? cur.deal.days : 3;
-        $('dAddress').value = (cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+    CJ.on('records-changed', function (e) {
+      if (cur && e && e.external) {
+        var fresh = CJ.get(cur.id);
+        if (fresh) {
+          cur = JSON.parse(JSON.stringify(fresh));
+          $('mNumber').value = cur.number || '';
+          $('mUpdated').value = fmtDateTime(cur.updatedAt);
+          $('mManager').value = cur.createdBy || '';
+          C_FIELDS.forEach(function (f) {
+            $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value =
+              (cur.contractor && cur.contractor[f]) || '';
+          });
+          if (cur.deal) {
+            $('dDelivery').value = cur.deal.delivery || 'pickup';
+            $('dPayment').value = cur.deal.payment != null ? cur.deal.payment : 100;
+            $('dDays').value = cur.deal.days != null ? cur.deal.days : 3;
+            $('dAddress').value = (cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+          }
+          $('mStatus').value = cur.status;
+          $('mComment').value = cur.comment || '';
+          renderRows();
+          renderComments();
+          renderHistory();
+          updateTotals();
+          curBase = comparable(cur);
+          notify('Данные обновлены из i5');
+        }
+      } else if (!cur) {
+        render();
+      } else {
+        renderStats();
       }
-
-      $('mStatus').value = cur.status;
-      $('mComment').value = cur.comment || '';
-
-      renderRows();
-      renderComments();
-      renderHistory();
-      updateTotals();
-      curBase = comparable(cur);
-      notify('Данные обновлены из i5');
-    }
-  } else if (!cur) {
-    render();
-  } else {
-    renderStats();
-  }
-});
-    CJ.on('sync-error', function (d) {
+    });
+    CJ.on('sync-error', function () {
       notify('Запись сохранена локально, но не ушла на сервер', true);
     });
     CJ.on('storage-error', function () {
@@ -1186,8 +1162,6 @@ CJ.on('records-changed', function (e) {
       render();
     });
   }
-
-  /* ---------- старт ---------- */
 
   function boot() {
     fillStatusSelect();
