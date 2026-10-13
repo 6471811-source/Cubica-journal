@@ -448,9 +448,12 @@
         angle: (meta.angle !== undefined ? meta.angle : first.angle) ? 1 : 0
       },
       r: num(meta.rotation || first.rotation),
-      rows: (rec.rows || []).map(function (r) {
-        return { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
-      }),
+rows: (rec.rows || []).map(function (r) {
+  var row = { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
+  /* Сохраняем раскрой рейки (pieces) — раскрывается клиенту после оплаты */
+  if (r.pieces) row.pieces = r.pieces;
+  return row;
+}),
       price: totals.total, subtotal: totals.subtotal, vat: totals.vat,
       currency: s.currency, invoiceNumber: rec.number,
       deal: clone(rec.deal), buyer: clone(rec.contractor),
