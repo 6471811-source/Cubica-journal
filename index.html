@@ -736,12 +736,14 @@ function refreshClientPayload(rec) {
   var data = CJ_local.b64enc(JSON.stringify(payload));
 
   notify('Обновляю ссылку клиента…');
-  fetch(apiBase + '/update/' + encodeURIComponent(token), {
-    method: 'POST',
+var headers = { 'Content-Type': 'application/json' };
+if (s.apiToken) headers['Authorization'] = 'Bearer ' + s.apiToken;
 
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload: data })
-  }).then(function (res) {
+fetch(apiBase + '/update/' + encodeURIComponent(token), {
+  method: 'POST',
+  headers: headers,
+  body: JSON.stringify({ payload: data })
+}).then(function (res) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   }).then(function () {
