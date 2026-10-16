@@ -70,6 +70,28 @@
     return (Number(v) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  /* ★ ПРАВКА 1: нормализация pieces — единая точка для всех страниц */
+  function normalizePieces(pieces) {
+    if (!pieces) return null;
+    if (Array.isArray(pieces)) {
+      var obj = {};
+      for (var i = 0; i < pieces.length; i++) {
+        var n = Number(pieces[i]);
+        if (isFinite(n) && n > 0) obj[String(n)] = (obj[String(n)] || 0) + 1;
+      }
+      return Object.keys(obj).length ? obj : null;
+    }
+    if (typeof pieces === 'object') {
+      var clean = {};
+      Object.keys(pieces).forEach(function (k) {
+        var n = Number(pieces[k]);
+        if (isFinite(n) && n > 0) clean[String(k)] = n;
+      });
+      return Object.keys(clean).length ? clean : null;
+    }
+    return null;
+  }
+
   function loadSettings() {
     var s = clone(DEFAULTS);
     try {
@@ -410,6 +432,7 @@
     return save(rec, { assignNumber: false });
   }
 
+  /* ★ ПРАВКА 2: buildClientPayload теперь прокидывает labelFull */
   function buildClientPayload(rec) {
     var s = loadSettings();
     var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
@@ -434,7 +457,7 @@
     var valid = new Date(); valid.setDate(valid.getDate() + 10);
     return {
       v: 6, rooms: rooms, i5_url: s.urls.i5,
-             paid: rec.status === 'paid',
+      paid: rec.status === 'paid',
       paidAt: rec.status === 'paid' ? rec.updatedAt : null,
       L_in: num(meta.L_in || first.L_in),
       W_in: num(meta.W_in || first.W_in),
@@ -450,12 +473,13 @@
         angle: (meta.angle !== undefined ? meta.angle : first.angle) ? 1 : 0
       },
       r: num(meta.rotation || first.rotation),
-rows: (rec.rows || []).map(function (r) {
-  var row = { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
-  /* Сохраняем раскрой рейки (pieces) — раскрывается клиенту после оплаты */
-  if (r.pieces) row.pieces = r.pieces;
-  return row;
-}),
+      /* ★ ПРАВКА: сохраняем pieces и labelFull в строках */
+      rows: (rec.rows || []).map(function (r) {
+        var row = { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
+        if (r.pieces) row.pieces = r.pieces;
+        if (r.labelFull) row.labelFull = r.labelFull;
+        return row;
+      }),
       price: totals.total, subtotal: totals.subtotal, vat: totals.vat,
       currency: s.currency, invoiceNumber: rec.number,
       deal: clone(rec.deal), buyer: clone(rec.contractor),
@@ -504,52 +528,48 @@ rows: (rec.rows || []).map(function (r) {
   }
 
   function sendKpToClient(rec) {
-  var s = loadSettings();
-  var payload = buildClientPayload(rec);
-  var data = b64enc(JSON.stringify(payload));
+    var s = loadSettings();
+    var payload = buildClientPayload(rec);
+    var data = b64enc(JSON.stringify(payload));
 
-  /* Если у записи уже есть клиентская ссылка — обновляем её,
-     а не создаём новую. Иначе клиент, открыв старую ссылку,
-     не увидит обновления. */
-  if (rec.client && rec.client.token) {
-    return fetch(s.apiBase + '/update/' + encodeURIComponent(rec.client.token), {
+    if (rec.client && rec.client.token) {
+      return fetch(s.apiBase + '/update/' + encodeURIComponent(rec.client.token), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: data })
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(function () {
+        rec.client.sentAt = nowISO();
+        if (rec.status === 'draft') rec.status = 'sent';
+        rec.history = rec.history || [];
+        rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link updated' });
+        save(rec, { assignNumber: false });
+        return rec.client.url;
+      });
+    }
+
+    return fetch(s.apiBase + '/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payload: data })
+      body: JSON.stringify({ payload: data, recordId: rec.id })
     }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
-    }).then(function () {
+    }).then(function (j) {
+      if (!j || !j.id) throw new Error('Сервис не вернул id');
+      rec.client = rec.client || {};
+      rec.client.token = j.id;
+      rec.client.url = kpUrlForToken(j.id);
       rec.client.sentAt = nowISO();
       if (rec.status === 'draft') rec.status = 'sent';
       rec.history = rec.history || [];
-      rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link updated' });
+      rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link created' });
       save(rec, { assignNumber: false });
       return rec.client.url;
     });
   }
-
-  /* Первый раз — создаём новую ссылку */
-  return fetch(s.apiBase + '/save', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payload: data, recordId: rec.id })
-  }).then(function (res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
-  }).then(function (j) {
-    if (!j || !j.id) throw new Error('Сервис не вернул id');
-    rec.client = rec.client || {};
-    rec.client.token = j.id;
-    rec.client.url = kpUrlForToken(j.id);
-    rec.client.sentAt = nowISO();
-    if (rec.status === 'draft') rec.status = 'sent';
-    rec.history = rec.history || [];
-    rec.history.push({ at: nowISO(), by: loadSettings().manager, action: 'client link created' });
-    save(rec, { assignNumber: false });
-    return rec.client.url;
-  });
-}
   function fetchOpens(recordId) {
     if (!recordId || !loadSettings().apiBase) return Promise.resolve(null);
     return apiFetch('/records/' + encodeURIComponent(recordId) + '/opens')
@@ -625,7 +645,7 @@ rows: (rec.rows || []).map(function (r) {
   }
 
   var CJ = {
-    version: '1.0.0',
+    version: '1.0.1',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -646,6 +666,7 @@ rows: (rec.rows || []).map(function (r) {
     statusInfo: statusInfo, money: money,
     b64enc: b64enc, b64dec: b64dec,
     uid: uid, num: num, clone: clone, nowISO: nowISO,
+    normalizePieces: normalizePieces,   /* ★ ПРАВКА: экспорт */
     on: on
   };
 
