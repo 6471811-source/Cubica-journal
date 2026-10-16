@@ -716,7 +716,11 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   }
 /* Обновляет содержимое уже сгенерированной ссылки клиента.
    Используется когда счёт помечен «Оплачено» — раскрываем клиенту
-   детали раскроя (pieces), которые в обычном режиме скрыты. */
+   детали раскроя (pieces), которые в обычном режиме скрыты.
+
+   ★ ПРАВКА: добавлен заголовок Authorization, если в настройках
+   задан apiToken. Иначе Worker отбивал запрос 401, и KV не обновлялся —
+   клиент видел старое КП без paid:true. */
 function refreshClientPayload(rec) {
   var CJ_local = window.CubicaJournal;
   if (!CJ_local) return;
@@ -735,15 +739,16 @@ function refreshClientPayload(rec) {
 
   var data = CJ_local.b64enc(JSON.stringify(payload));
 
-  notify('Обновляю ссылку клиента…');
-var headers = { 'Content-Type': 'application/json' };
-if (s.apiToken) headers['Authorization'] = 'Bearer ' + s.apiToken;
+  /* ★ Собираем заголовки с токеном, если он задан */
+  var headers = { 'Content-Type': 'application/json' };
+  if (s.apiToken) headers['Authorization'] = 'Bearer ' + s.apiToken;
 
-fetch(apiBase + '/update/' + encodeURIComponent(token), {
-  method: 'POST',
-  headers: headers,
-  body: JSON.stringify({ payload: data })
-}).then(function (res) {
+  notify('Обновляю ссылку клиента…');
+  fetch(apiBase + '/update/' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({ payload: data })
+  }).then(function (res) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   }).then(function () {
