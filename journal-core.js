@@ -437,7 +437,7 @@
     var s = loadSettings();
     var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
     var rooms = (rec.rooms || []).map(function (room) {
-      return {
+      var roomObj = {
         name: room.name || 'Помещение',
         L_in: num(room.L_in), W_in: num(room.W_in),
         railW: num(room.railW, 50), railH: num(room.railH, 30), gap: num(room.gap, 15),
@@ -451,6 +451,11 @@
           return { label: String(r.label || ''), qty: num(r.qty), unit: r.unit || 'шт.' };
         })
       };
+      /* ★ ПРАВКА: прокидываем объединение и раскрой в payload */
+      if (room.cuttingScheme) roomObj.cuttingScheme = clone(room.cuttingScheme);
+      if (room.mergedResult)  roomObj.mergedResult  = clone(room.mergedResult);
+      if (room.mergedCutsSet) roomObj.mergedCutsSet = clone(room.mergedCutsSet);
+      return roomObj;
     });
     var meta = rec.meta || {};
     var first = rooms[0] || {};
