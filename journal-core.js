@@ -436,6 +436,7 @@
   function buildClientPayload(rec) {
     var s = loadSettings();
     var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
+    
     var rooms = (rec.rooms || []).map(function (room) {
       var roomObj = {
         name: room.name || 'Помещение',
@@ -448,18 +449,23 @@
         polygon: room.polygon || null,
         areaM2: num(room.areaM2),
         rows: (room.rows || []).map(function (r) {
-          return { label: String(r.label || ''), qty: num(r.qty), unit: r.unit || 'шт.' };
+          return { 
+            label: String(r.label || ''), 
+            qty: num(r.qtyCalc !== undefined ? r.qtyCalc : r.qty), // Поддерживаем оба формата
+            unit: r.unit || 'шт.' 
+          };
         })
       };
-      /* ★ ПРАВКА: прокидываем объединение и раскрой в payload */
       if (room.cuttingScheme) roomObj.cuttingScheme = clone(room.cuttingScheme);
       if (room.mergedResult)  roomObj.mergedResult  = clone(room.mergedResult);
       if (room.mergedCutsSet) roomObj.mergedCutsSet = clone(room.mergedCutsSet);
       return roomObj;
     });
+
     var meta = rec.meta || {};
     var first = rooms[0] || {};
     var valid = new Date(); valid.setDate(valid.getDate() + 10);
+
     return {
       v: 6, rooms: rooms, i5_url: s.urls.i5,
       paid: rec.status === 'paid',
@@ -478,13 +484,20 @@
         angle: (meta.angle !== undefined ? meta.angle : first.angle) ? 1 : 0
       },
       r: num(meta.rotation || first.rotation),
-      /* ★ ПРАВКА: сохраняем pieces и labelFull в строках */
+      
+      // ★ ГЛАВНОЕ ИСПРАВЛЕНИЕ: передаем строки в i5 как есть
       rows: (rec.rows || []).map(function (r) {
-        var row = { label: r.label, qty: rowQty(r), unit: r.unit || 'шт.', price: num(r.price) };
+        var row = { 
+          label: r.label, 
+          qty: num(r.qtyCalc) + num(r.qtyReserve), 
+          unit: r.unit || 'шт.', 
+          price: num(r.price) 
+        };
         if (r.pieces) row.pieces = r.pieces;
         if (r.labelFull) row.labelFull = r.labelFull;
         return row;
       }),
+      
       price: totals.total, subtotal: totals.subtotal, vat: totals.vat,
       currency: s.currency, invoiceNumber: rec.number,
       deal: clone(rec.deal), buyer: clone(rec.contractor),
