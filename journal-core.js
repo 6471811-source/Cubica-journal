@@ -1,7 +1,5 @@
 /* ============================================================
-   CUBICA · Ядро журнала
-   Подключается на: журнал, i5, k6.3
-   Публичный интерфейс: window.CubicaJournal
+   CUBICA · Ядро журнала (v1.0.2 - поддержка Armstrong)
    ============================================================ */
 (function (global) {
   'use strict';
@@ -70,7 +68,6 @@
     return (Number(v) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  /* ★ ПРАВКА 1: нормализация pieces — единая точка для всех страниц */
   function normalizePieces(pieces) {
     if (!pieces) return null;
     if (Array.isArray(pieces)) {
@@ -285,6 +282,7 @@
     var rec = {
       id: uid(series === 'kp' ? 'kp' : 'inv'),
       series: series,
+      type: 'cubica',
       number: '',
       status: 'draft',
       createdAt: nowISO(),
@@ -418,6 +416,7 @@
   function fromCalcPayload(payload, opts) {
     opts = opts || {};
     var rec = emptyRecord({ series: 'invoice', manager: opts.manager });
+    rec.type = payload.type || 'cubica';
     rec.rooms = clone(payload.rooms || []);
     rec.meta = clone(payload.meta || null);
     if (payload.company) rec.company = clone(payload.company);
@@ -432,7 +431,6 @@
     return save(rec, { assignNumber: false });
   }
 
-  /* ★ ПРАВКА 2: buildClientPayload теперь прокидывает labelFull */
   function buildClientPayload(rec) {
     var s = loadSettings();
     var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
@@ -451,7 +449,7 @@
         rows: (room.rows || []).map(function (r) {
           return { 
             label: String(r.label || ''), 
-            qty: num(r.qtyCalc !== undefined ? r.qtyCalc : r.qty), // Поддерживаем оба формата
+            qty: num(r.qtyCalc !== undefined ? r.qtyCalc : r.qty), 
             unit: r.unit || 'шт.' 
           };
         })
@@ -467,7 +465,10 @@
     var valid = new Date(); valid.setDate(valid.getDate() + 10);
 
     return {
-      v: 6, rooms: rooms, i5_url: s.urls.i5,
+      v: 6, 
+      type: rec.type || 'cubica',
+      rooms: rooms, 
+      i5_url: s.urls.i5,
       paid: rec.status === 'paid',
       paidAt: rec.status === 'paid' ? rec.updatedAt : null,
       L_in: num(meta.L_in || first.L_in),
@@ -485,11 +486,10 @@
       },
       r: num(meta.rotation || first.rotation),
       
-      // ★ ГЛАВНОЕ ИСПРАВЛЕНИЕ: передаем строки в i5 как есть
       rows: (rec.rows || []).map(function (r) {
         var row = { 
           label: r.label, 
-          qty: num(r.qtyCalc) + num(r.qtyReserve), 
+          qty: (rec.type === 'armstrong') ? num(r.qtyCalc) : rowQty(r), 
           unit: r.unit || 'шт.', 
           price: num(r.price) 
         };
@@ -663,7 +663,7 @@
   }
 
   var CJ = {
-    version: '1.0.1',
+    version: '1.0.2',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -684,7 +684,7 @@
     statusInfo: statusInfo, money: money,
     b64enc: b64enc, b64dec: b64dec,
     uid: uid, num: num, clone: clone, nowISO: nowISO,
-    normalizePieces: normalizePieces,   /* ★ ПРАВКА: экспорт */
+    normalizePieces: normalizePieces,
     on: on
   };
 
