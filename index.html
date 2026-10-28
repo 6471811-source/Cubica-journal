@@ -108,9 +108,10 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     <div class="badge" id="modeBadge">Хранилище: локально</div>
   </header>
 
-  <div class="toolbar">
+<div class="toolbar">
     <button type="button" class="btn primary" id="btnNewInvoice">＋ Новый счёт</button>
     <button type="button" class="btn green" id="btnNewKp">🧮 Калькулятор Кубота</button>
+    <button type="button" class="btn green" id="btnNewArmstrong">🧱 Калькулятор Армстронга</button>
     <span class="spacer"></span>
     <button type="button" class="btn" id="btnExport">⬇ Экспорт JSON</button>
     <button type="button" class="btn" id="btnImport">⬆ Импорт JSON</button>
@@ -1032,6 +1033,11 @@ function refreshClientPayload(rec) {
 
     $('btnNewInvoice').addEventListener('click', createInvoice);
     $('btnNewKp').addEventListener('click', openCalculator);
+    $('btnNewArmstrong').addEventListener('click', function() {
+var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
+  if (!confirm('Открыть калькулятор Армстронга?\n\n' + armstrongUrl)) return;
+  window.open(armstrongUrl, '_blank');
+});
     $('btnExport').addEventListener('click', exportJson);
     $('btnImport').addEventListener('click', function () { $('importFile').click(); });
     $('importFile').addEventListener('change', function () {
