@@ -492,6 +492,14 @@
   }
   function calcUrlForRecord(rec) {
     var s = loadSettings();
+    // Если запись из Армстронга, ведем в его калькулятор
+    if (rec && rec.type === 'armstrong') {
+      // Берем базовый URL из настроек (по умолчанию это URL Кубота)
+      // Но подменяем его на URL Армстронга
+      var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
+      return rec ? withParam(armstrongUrl, 'jid', rec.id) : armstrongUrl;
+    }
+    // Иначе ведем в Кубота
     return rec ? withParam(s.urls.calc, 'jid', rec.id) : s.urls.calc;
   }
   function kpUrlForToken(token) {
