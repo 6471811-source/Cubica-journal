@@ -703,11 +703,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     notify('Открываю калькулятор по записи ' + (rec.number || rec.id));
   }
 
-  function actionOpenCalc(rec) {
-    var url = CJ.calcUrlForRecord(rec);
-    window.open(url, '_blank');
-    notify('Открываю калькулятор по записи ' + (rec.number || rec.id));
-  }
+  
 
   function actionSendKp(rec) {
     if (!rec.rows || !rec.rows.length) {
