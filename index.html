@@ -702,7 +702,11 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     window.open(url, '_blank');
     notify('Открываю калькулятор по записи ' + (rec.number || rec.id));
   }
-
+  function actionOpenI5(rec) {
+    var url = CJ.i5UrlForRecord(rec);
+    window.open(url, '_blank');
+    notify('Открываю счёт по записи ' + (rec.number || rec.id));
+  }
   
 
   function actionSendKp(rec) {
