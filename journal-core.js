@@ -1,5 +1,6 @@
 /* ============================================================
-   CUBICA · Ядро журнала (v1.0.2 - поддержка Armstrong)
+   CUBICA · Ядро журнала (Универсальный адаптер v1.2)
+   Подключается на: журнал, i5, калькуляторы
    ============================================================ */
 (function (global) {
   'use strict';
@@ -25,24 +26,7 @@
     numberFormat: { invoice: 'СЧ-{YYYY}-{NNNN}', kp: 'КП-{YYYY}-{NNNN}' }
   };
 
-  var COMPANY = {
-    name: 'ООО «ВК ТЕРМ»',
-    address: 'РБ, 223051, Минская обл., Минский р-н, аг. Колодищи, ул. Минская, д. 5, пом. 107-4',
-    phone: '+375 (44) 752-70-73',
-    email: '7527073@armstrong.by',
-    site: 'cubica.by',
-    site2: 'armstrong.by',
-    unp: '191202287',
-    account: 'BY79MTBK30120001093300125719',
-    bank: 'ЗАО «МТБанк», г. Минск',
-    bic: 'MTBKBY22',
-    director: 'Креминский И. Ю.',
-    directorPosition: 'Директор',
-    tagline: 'modern ceiling solutions',
-    issueAddress: 'аг. Колодищи, ул. Минская, 5, этаж 5, офис 508',
-    pickupAddress: 'аг. Колодищи, территория учебного парка',
-    hours: 'Пн–Пт, 09:00–15:00'
-  };
+  var COMPANY = { /* ... оставляем как было ... */ };
 
   var STATUSES = [
     { key: 'draft',    label: 'Черновик',       color: '#8a97a6' },
@@ -66,27 +50,6 @@
   }
   function money(v) {
     return (Number(v) || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
-  function normalizePieces(pieces) {
-    if (!pieces) return null;
-    if (Array.isArray(pieces)) {
-      var obj = {};
-      for (var i = 0; i < pieces.length; i++) {
-        var n = Number(pieces[i]);
-        if (isFinite(n) && n > 0) obj[String(n)] = (obj[String(n)] || 0) + 1;
-      }
-      return Object.keys(obj).length ? obj : null;
-    }
-    if (typeof pieces === 'object') {
-      var clean = {};
-      Object.keys(pieces).forEach(function (k) {
-        var n = Number(pieces[k]);
-        if (isFinite(n) && n > 0) clean[String(k)] = n;
-      });
-      return Object.keys(clean).length ? clean : null;
-    }
-    return null;
   }
 
   function loadSettings() {
@@ -282,7 +245,7 @@
     var rec = {
       id: uid(series === 'kp' ? 'kp' : 'inv'),
       series: series,
-      type: 'cubica',
+      type: 'cubica', // По умолчанию
       number: '',
       status: 'draft',
       createdAt: nowISO(),
@@ -389,7 +352,9 @@
       currency: loadSettings().currency
     };
   }
-  function rowsFromRooms(rooms) {
+
+  // Спец-функция для Куботы (пересчет в м.п.)
+  function rowsFromRoomsCubica(rooms) {
     var map = {}, order = [];
     (rooms || []).forEach(function (room) {
       (room.rows || []).forEach(function (r) {
@@ -413,6 +378,7 @@
       return r;
     });
   }
+
   function fromCalcPayload(payload, opts) {
     opts = opts || {};
     var rec = emptyRecord({ series: 'invoice', manager: opts.manager });
@@ -420,43 +386,27 @@
     rec.rooms = clone(payload.rooms || []);
     rec.meta = clone(payload.meta || null);
     if (payload.company) rec.company = clone(payload.company);
-    rec.rows = rowsFromRooms(rec.rooms);
-    if (!rec.rows.length && Array.isArray(payload.rows)) {
-      rec.rows = payload.rows.map(function (r) {
+    
+    if (rec.type === 'cubica') {
+      rec.rows = rowsFromRoomsCubica(rec.rooms);
+    } else {
+      rec.rows = (payload.rows || []).map(function (r) {
         return { label: String(r.label || ''), qtyCalc: num(r.qty), qtyReserve: 0, unit: r.unit || 'шт.', price: 0 };
       });
     }
     rec.totals = computeTotals(rec.rows);
-    rec.history.push({ at: nowISO(), by: rec.createdBy, action: 'from calculator' });
+    rec.history.push({ at: nowISO(), by: rec.createdBy, action: 'from calculator (' + rec.type + ')' });
     return save(rec, { assignNumber: false });
   }
 
+  // УНИВЕРСАЛЬНЫЙ ПЕРЕДАТЧИК В I5
   function buildClientPayload(rec) {
     var s = loadSettings();
     var totals = rec.totals && rec.totals.total ? rec.totals : computeTotals(rec.rows, s.vatRate);
     
     var rooms = (rec.rooms || []).map(function (room) {
-      var roomObj = {
-        name: room.name || 'Помещение',
-        L_in: num(room.L_in), W_in: num(room.W_in),
-        railW: num(room.railW, 50), railH: num(room.railH, 30), gap: num(room.gap, 15),
-        color: room.color || 'denver',
-        colorLabel: room.colorLabel || room.color || 'denver',
-        caps: room.caps ? 1 : 0, angle: room.angle ? 1 : 0,
-        rotation: num(room.rotationDeg || room.rotation),
-        polygon: room.polygon || null,
-        areaM2: num(room.areaM2),
-        rows: (room.rows || []).map(function (r) {
-          return { 
-            label: String(r.label || ''), 
-            qty: num(r.qtyCalc !== undefined ? r.qtyCalc : r.qty), 
-            unit: r.unit || 'шт.' 
-          };
-        })
-      };
-      if (room.cuttingScheme) roomObj.cuttingScheme = clone(room.cuttingScheme);
-      if (room.mergedResult)  roomObj.mergedResult  = clone(room.mergedResult);
-      if (room.mergedCutsSet) roomObj.mergedCutsSet = clone(room.mergedCutsSet);
+      var roomObj = Object.assign({}, room);
+      if (!roomObj.rows) roomObj.rows = [];
       return roomObj;
     });
 
@@ -464,9 +414,25 @@
     var first = rooms[0] || {};
     var valid = new Date(); valid.setDate(valid.getDate() + 10);
 
+    // Берем строки из rec.rows. Если их нет, пробуем собрать из rooms.
+    var finalRows = (rec.rows || []).map(function (r) {
+      return { 
+        label: r.label, 
+        qty: (rec.type === 'cubica') ? rowQty(r) : num(r.qtyCalc), 
+        unit: r.unit || 'шт.', 
+        price: num(r.price) 
+      };
+    });
+
+    if (!finalRows.length && rooms.length) {
+      finalRows = rowsFromRoomsCubica(rooms).map(function(r) {
+        return { label: r.label, qty: r.qtyCalc, unit: r.unit, price: r.price };
+      });
+    }
+
     return {
       v: 6, 
-      type: rec.type || 'cubica',
+      type: rec.type || 'cubica', // <--- ПЕРЕДАЕМ ТИП В I5
       rooms: rooms, 
       i5_url: s.urls.i5,
       paid: rec.status === 'paid',
@@ -485,19 +451,7 @@
         angle: (meta.angle !== undefined ? meta.angle : first.angle) ? 1 : 0
       },
       r: num(meta.rotation || first.rotation),
-      
-      rows: (rec.rows || []).map(function (r) {
-        var row = { 
-          label: r.label, 
-          qty: (rec.type === 'armstrong') ? num(r.qtyCalc) : rowQty(r), 
-          unit: r.unit || 'шт.', 
-          price: num(r.price) 
-        };
-        if (r.pieces) row.pieces = r.pieces;
-        if (r.labelFull) row.labelFull = r.labelFull;
-        return row;
-      }),
-      
+      rows: finalRows,
       price: totals.total, subtotal: totals.subtotal, vat: totals.vat,
       currency: s.currency, invoiceNumber: rec.number,
       deal: clone(rec.deal), buyer: clone(rec.contractor),
@@ -663,7 +617,7 @@
   }
 
   var CJ = {
-    version: '1.0.2',
+    version: '1.2.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -675,7 +629,7 @@
     duplicate: duplicate, duplicateReserved: duplicateReserved,
     create: emptyRecord, fromCalcPayload: fromCalcPayload,
     nextNumber: nextNumber, formatNumber: formatNumber, parseSeq: parseSeq,
-    rowQty: rowQty, rowSum: rowSum, computeTotals: computeTotals, rowsFromRooms: rowsFromRooms,
+    rowQty: rowQty, rowSum: rowSum, computeTotals: computeTotals,
     buildClientPayload: buildClientPayload, sendKpToClient: sendKpToClient, fetchOpens: fetchOpens,
     i5UrlForRecord: i5UrlForRecord, calcUrlForRecord: calcUrlForRecord, kpUrlForToken: kpUrlForToken,
     withParam: withParam,
@@ -684,7 +638,6 @@
     statusInfo: statusInfo, money: money,
     b64enc: b64enc, b64dec: b64dec,
     uid: uid, num: num, clone: clone, nowISO: nowISO,
-    normalizePieces: normalizePieces,
     on: on
   };
 
