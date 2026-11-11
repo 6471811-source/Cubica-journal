@@ -407,15 +407,6 @@
     var rooms = (rec.rooms || []).map(function (room) {
       var roomObj = Object.assign({}, room);
       if (!roomObj.rows) roomObj.rows = [];
-      
-      // ★ ИСПРАВЛЕНИЕ: КП ждет поле "rotation", а журнал хранит "rotationDeg"
-      // Если rotation нет (или он 0), а rotationDeg есть — перекладываем его в rotation
-      if (roomObj.rotation === undefined || roomObj.rotation === null || roomObj.rotation === 0) {
-        if (roomObj.rotationDeg !== undefined && roomObj.rotationDeg !== null) {
-          roomObj.rotation = Number(roomObj.rotationDeg) || 0;
-        }
-      }
-      
       return roomObj;
     });
 
