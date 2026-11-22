@@ -418,7 +418,7 @@
     var finalRows = (rec.rows || []).map(function (r) {
       return { 
         label: r.label, 
-        qty: (rec.type === 'cubica') ? rowQty(r) : num(r.qtyCalc), 
+        qty: rowQty(r), // Всегда складываем qtyCalc + qtyReserve 
         unit: r.unit || 'шт.', 
         price: num(r.price) 
       };
