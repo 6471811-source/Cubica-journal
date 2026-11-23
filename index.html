@@ -118,6 +118,28 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 .cat-pack input.r{width:64px}
 .cat-pack select{width:58px}
 .cat-del{width:26px;height:26px;border-radius:6px;border:1px solid #f0c0c0;background:#fff;color:#c00000;cursor:pointer;font-size:11px;padding:0}
+.seg{display:inline-flex;border:1px solid #ddd;border-radius:9px;overflow:hidden;background:#fff}
+.seg button{padding:10px 14px;font-size:13px;font-weight:700;font-family:inherit;border:none;background:#fff;color:#5a6b7a;cursor:pointer}
+.seg button.on{background:#1a1a2e;color:#fff}
+.cat-info{font-size:12px;color:#7a8a99;margin:-4px 0 10px;padding-left:2px}
+.cat-info b{color:#1a1a2e}
+.cat-table td.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px}
+.cat-table .ind{display:inline-block}
+.cat-table .arr{display:inline-block;width:18px;color:#9aa1ac;cursor:pointer;font-size:10px;transition:transform .15s;text-align:center}
+.cat-table tr.open .arr{transform:rotate(90deg)}
+.cat-table tr.fold td{background:#fbfbfc}
+.cat-table tr.fold td.nm{font-weight:800;cursor:pointer}
+.cat-table tr.fold .fcnt{font-weight:600;color:#9aa1ac;font-size:11px;margin-left:6px}
+.cat-table tr.fold .ftag{font-size:10px;font-weight:800;color:#b26a00;background:#fff4e0;border-radius:10px;padding:1px 7px;margin-left:6px}
+.cat-table tr.set td.nm::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#2e7d32;margin-right:6px;vertical-align:middle}
+.cat-table tr.orph td{background:#fff5f5}
+.cat-table td.code{color:#9aa1ac;font-size:11.5px;font-variant-numeric:tabular-nums}
+.cat-table td.u{color:#5a6b7a;font-size:12px}
+.cat-table input::placeholder{color:#b0b6bf;font-style:italic}
+.cat-table .path{display:block;font-size:10.5px;color:#a0a8b0;font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.cat-table .hint{font-size:10.5px;color:#9aa1ac;padding-left:4px;white-space:nowrap}
+.cat-clr{width:24px;height:24px;border-radius:6px;border:1px solid #e6e6e6;background:#fff;color:#9aa1ac;cursor:pointer;font-size:11px;padding:0}
+.cat-clr:hover{border-color:#c00000;color:#c00000}
 .cat-help{font-size:12px;color:#7a8a99;line-height:1.6;margin-top:10px;padding:12px 14px;background:#fff;border:1px solid #ececec;border-radius:10px}
 </style>
 </head>
@@ -134,7 +156,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 
   <nav class="tabs">
     <button type="button" class="tab active" data-tab="journal">📒 Журнал</button>
-    <button type="button" class="tab" data-tab="catalog">📚 Справочник<span class="cnt" id="catCount">0</span></button>
+    <button type="button" class="tab" data-tab="catalog">📚 Справочник<span class="cnt" id="catCount">…</span></button>
   </nav>
 
 <div id="tabJournal">
@@ -215,60 +237,62 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 <!-- ===================== СПРАВОЧНИК ===================== -->
 <div id="tabCatalog" hidden>
   <div class="toolbar">
-    <button type="button" class="btn primary" data-cat-add="plate">＋ Плита</button>
-    <button type="button" class="btn primary" data-cat-add="light">＋ Светильник</button>
-    <button type="button" class="btn" data-cat-add="profile">＋ Профиль</button>
-    <button type="button" class="btn" data-cat-add="other">＋ Прочее</button>
+    <div class="seg" id="catView">
+      <button type="button" data-view="tree" class="on">🗂 По папкам</button>
+      <button type="button" data-view="list">☰ Списком</button>
+    </div>
+    <button type="button" class="btn" id="btnCatExpand">⊞ Развернуть всё</button>
+    <button type="button" class="btn" id="btnCatCollapse">⊟ Свернуть всё</button>
     <span class="spacer"></span>
     <span class="cat-dirty" id="catDirty">● Есть несохранённые изменения</span>
-    <button type="button" class="btn" id="btnCatReload">⟳ Обновить</button>
+    <button type="button" class="btn" id="btnCatReload" title="Заново прочитать выгрузку номенклатуры и настройки с сервера">⟳ Обновить из 1С</button>
+    <button type="button" class="btn" id="btnCatFile" title="Открыть XML-выгрузку 1С с компьютера (только в этом браузере)">📂 XML-файл</button>
+    <input type="file" id="catFile" accept=".xml,text/xml,application/xml" hidden>
     <button type="button" class="btn green" id="btnCatSave">💾 Сохранить справочник</button>
   </div>
   <section class="filters">
-    <input type="text" id="catSearch" placeholder="🔍 Поиск по названию или артикулу…" autocomplete="off">
-    <select id="catTypeFilter">
+    <input type="text" id="catSearch" placeholder="🔍 Поиск по названию, коду или артикулу…" autocomplete="off">
+    <select id="catFilter">
       <option value="">Все позиции</option>
-      <option value="plate">Плиты</option>
-      <option value="light">Светильники</option>
-      <option value="profile">Профили</option>
-      <option value="other">Прочее</option>
-    </select>
-    <select id="catActiveFilter">
-      <option value="">Активные и скрытые</option>
-      <option value="1">Только активные</option>
-      <option value="0">Только скрытые</option>
+      <option value="set">Настроенные</option>
+      <option value="unset">Не настроенные</option>
+      <option value="pack">Кратно пачке</option>
+      <option value="price">С рекомендованной ценой</option>
+      <option value="orphan">Нет в 1С</option>
     </select>
   </section>
+  <div class="cat-info" id="catInfo">Загрузка номенклатуры…</div>
   <section class="tablewrap">
     <table class="cat-table">
       <thead>
         <tr>
-          <th style="width:44px" title="Показывать в калькуляторах">Акт.</th>
-          <th style="width:44px" title="Позиция по умолчанию в калькуляторе">Осн.</th>
-          <th>Наименование</th>
-          <th style="width:110px">Артикул</th>
-          <th style="width:104px">Размер</th>
-          <th style="width:82px;text-align:right">м² в шт.</th>
-          <th style="width:74px">Ед.</th>
-          <th style="width:60px;text-align:center">Кратно пачке</th>
+          <th>Наименование (1С)</th>
+          <th style="width:96px">Код</th>
+          <th style="width:58px">Ед.</th>
+          <th style="width:86px;text-align:right" title="Площадь одной штуки — для плит. Определяется по размеру в названии, можно задать вручную">м² в шт.</th>
+          <th style="width:92px">Кратно пачке</th>
           <th style="width:150px">В пачке</th>
-          <th style="width:94px;text-align:right">Цена без НДС</th>
+          <th style="width:96px;text-align:right">Рек. цена</th>
           <th style="width:150px">Примечание</th>
-          <th style="width:36px"></th>
+          <th style="width:34px"></th>
         </tr>
       </thead>
       <tbody id="catBody"></tbody>
     </table>
-    <div class="empty" id="catEmpty" style="display:none"><b>📚</b>Ничего не найдено.</div>
+    <div class="empty" id="catEmpty" style="display:none"><b>📚</b><span id="catEmptyText">Ничего не найдено.</span></div>
+    <div id="catMore" style="display:none;text-align:center;padding:12px"><button type="button" class="btn" id="btnCatMore">Показать ещё</button></div>
   </section>
   <div class="cat-help">
-    <b>Как это работает.</b> Калькуляторы берут отсюда активные плиты и светильники.
-    «Осн.» — позиция, которая выбирается по умолчанию (одна на тип и размер).
-    Плиты считаются в м²: 600×600 = 0,36 м², 1200×600 = 0,72 м².
-    Если стоит «Кратно пачке», калькулятор округлит количество вверх до целых пачек
-    (в пачке можно указать штуки или м²). Цена подставляется в журнал, если в позиции счёта цена не указана.
+    <b>Как это работает.</b> Названия, коды, папки и единицы берутся из выгрузки 1С — их меняют только в 1С.
+    В справочнике вы задаёте то, чего нет в 1С: кратность пачке, сколько в пачке, м² в одной штуке и рекомендованную цену. Запас в процентах выставляется в счёте (i5).
+    Серым курсивом — значение, унаследованное от папки или определённое по названию (размер плиты, «18 шт.», «6,48 м2»); чтобы закрепить — впишите своё.
+    <b>Настройка на папке</b> действует на все позиции внутри (серым — унаследованное значение); если у позиции задано своё — оно главнее.
+    ✕ в строке убирает собственные настройки позиции (останутся унаследованные).
+    Настройки привязаны к коду 1С, поэтому новая выгрузка их не стирает.
     <span id="catWhere"></span>
   </div>
+</div>
+</div>
 </div>
 </div>
 
@@ -1196,7 +1220,7 @@ var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
         if (ci) {
           var trc = inp.closest('tr');
           if (!CJ.num(row.price) && ci.price) { row.price = ci.price; trc.querySelector('input[data-f="price"]').value = String(ci.price).replace('.', ','); }
-          if (ci.unit && (!row.unit || row.unit === 'шт.')) { row.unit = ci.unit; trc.querySelector('input[data-f="unit"]').value = ci.unit; }
+          if (ci.unit && (!row.unit || row.unit === 'шт.' || row.unit === 'шт')) { row.unit = ci.unit; trc.querySelector('input[data-f="unit"]').value = ci.unit; }
           trc.querySelector('.calc').textContent = money(CJ.rowQty(row) * CJ.num(row.price) * 1.2);
         }
       }
@@ -1330,207 +1354,326 @@ $('mStatus').addEventListener('change', function () {
   }
 
   /* ============================================================
-     СПРАВОЧНИК
+     СПРАВОЧНИК: номенклатура 1С + наши настройки
      ============================================================ */
-  var catItems = [];
-  var catBase = '';
+  var catWork = {};          // code -> настройки (рабочая копия)
+  var catBase = '{}';
   var catLoaded = false;
+  var catView = 'tree';
+  var catExpanded = {};
+  var catLimit = 300;
+  var CAT_F = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'price', 'note'];
 
-  function catIsDirty() { return JSON.stringify(catItems) !== catBase; }
+  function coreHasCatalog() { return typeof CJ.catalogResolve === 'function' && typeof CJ.nomLoad === 'function'; }
+  function catSnapshot() { var keys = Object.keys(catWork).sort(); var o = {}; keys.forEach(function (k) { if (!catEmptySet(catWork[k])) o[k] = catWork[k]; }); return JSON.stringify(o); }
+  function catEmptySet(o) { return !o || CAT_F.every(function (f) { return o[f] === undefined; }); }
+  function catIsDirty() { return catLoaded && catSnapshot() !== catBase; }
   function catMarkDirty() { $('catDirty').classList.toggle('show', catIsDirty()); }
+  function fmtN(v, d) { if (v === undefined || v === null || v === '') return ''; var n = Number(v); if (!isFinite(n)) return ''; return String(+n.toFixed(d == null ? 4 : d)).replace('.', ','); }
+
   function catLoadFromCore() {
-    catItems = CJ.catalog();
-    catBase = JSON.stringify(catItems);
+    catWork = CJ.catalogMap();
+    catBase = catSnapshot();
     catLoaded = true;
     catMarkDirty();
     renderCatalog();
-    fillCatDatalist();
   }
   function fillCatDatalist() {
-    var list = CJ.catalogList ? CJ.catalogList() : [];
-    $('catNames').innerHTML = list.map(function (x) { return '<option value="' + esc(x.name) + '">'; }).join('');
-    $('catCount').textContent = CJ.catalog ? CJ.catalog().length : 0;
+    if (!coreHasCatalog()) { $('catCount').textContent = '!'; $('catCount').title = 'Старая версия journal-core.js'; return; }
+    var idx = CJ.nomIndex();
+    $('catCount').textContent = idx ? idx.items.length : '…';
+    if (!idx) return;
+    var map = CJ.catalogMap();
+    // в подсказку позиций счёта — настроенные позиции и позиции из настроенных папок
+    var opts = [];
+    idx.items.forEach(function (n) {
+      var e = CJ.catalogResolve(n.id, map);
+      if (Object.keys(e.from).some(function (f) { return e.from[f] !== 'auto'; })) opts.push(n.name);
+    });
+    if (opts.length < 50) opts = idx.items.map(function (n) { return n.name; });
+    $('catNames').innerHTML = opts.map(function (nm) { return '<option value="' + esc(nm) + '">'; }).join('');
   }
-  function fmtNum(v, d) {
-    var n = CJ.num(v, 0);
-    if (!n) return '';
-    return String(+n.toFixed(d == null ? 4 : d)).replace('.', ',');
+  function catInfo() {
+    var idx = CJ.nomIndex();
+    var nSet = Object.keys(catWork).filter(function (k) { return !catEmptySet(catWork[k]); }).length;
+    if (!idx) { $('catInfo').innerHTML = 'Номенклатура ещё не загружена. Адрес выгрузки: <code>' + esc(CJ.nomUrl()) + '</code>'; return; }
+    var meta = '';
+    try { var raw = JSON.parse(localStorage.getItem('cubica_nomenclature_v2') || '{}'); if (raw.loadedAt || raw.generated) meta = ' · загружено ' + fmtDateTime(raw.loadedAt || raw.generated) + (raw.source && /файл/.test(raw.source) ? ' (из файла)' : ''); } catch (e) {}
+    $('catInfo').innerHTML = 'Номенклатура 1С: <b>' + idx.items.length + '</b> позиций в <b>' + idx.folders.length + '</b> папках' + meta + ' · настроено: <b>' + nSet + '</b>';
   }
-  function catRowHtml(x) {
-    var i = catItems.indexOf(x);
-    var hasSize = x.type === 'plate' || x.type === 'light';
-    var isPlate = x.type === 'plate';
-    var sizeSel = hasSize
-      ? '<select data-cf="size">' + CJ.CATALOG_SIZES.map(function (sz) {
-          return '<option value="' + sz + '"' + (x.size === sz ? ' selected' : '') + '>' + sz.replace('x', '×') + '</option>';
-        }).join('') + '</select>'
-      : '<span style="color:#c5cad1">—</span>';
-    var units = ['м²', 'шт.', 'пог. м', 'компл.'];
-    var unitSel = '<select data-cf="unit">' + units.map(function (u) {
-      return '<option' + (x.unit === u ? ' selected' : '') + '>' + u + '</option>';
-    }).join('') + '</select>';
-    var pack = '<div class="cat-pack"><input type="text" class="r" data-cf="packQty" value="' + fmtNum(x.packQty) + '" placeholder="—"' + (x.packMultiple ? '' : ' disabled') + '>' +
-      '<select data-cf="packUnit"' + (x.packMultiple ? '' : ' disabled') + '><option' + (x.packUnit === 'шт.' ? ' selected' : '') + '>шт.</option>' +
-      (isPlate ? '<option' + (x.packUnit === 'м²' ? ' selected' : '') + '>м²</option>' : '') + '</select></div>';
-    var packHint = '';
-    if (isPlate && x.packMultiple && x.packQty > 0) {
-      var m2pp = CJ.sizeM2(x.size);
-      packHint = x.packUnit === 'м²' ? ('≈ ' + Math.round(x.packQty / m2pp) + ' шт.') : ('= ' + fmtNum(x.packQty * m2pp, 2) + ' м²');
-      pack += '<div style="font-size:11px;color:#9aa1ac;margin-top:2px;padding-left:4px">' + packHint + '</div>';
+
+  function effOf(code) { return CJ.catalogResolve(code, catWork); }
+  function matchesFilter(n, e, flt) {
+    var own = catWork[n.id];
+    if (flt === 'set') return Object.keys(e.from).some(function (f) { return e.from[f] !== 'auto'; });
+    if (flt === 'unset') return !Object.keys(e.from).some(function (f) { return e.from[f] !== 'auto'; });
+    if (flt === 'pack') return e.packMultiple;
+    if (flt === 'price') return e.price > 0;
+    return true;
+  }
+  function rowHtml(n, depth, opt) {
+    opt = opt || {};
+    var isF = n.type === 'folder' || (n.children && n.children.length);
+    var own = catWork[n.id] || {};
+    var e = effOf(n.id);
+    var inh = function (f) { return e.from[f] && e.from[f] !== 'own' ? e[f] : undefined; };
+    var unit = isF ? '' : (n.unit || '');
+    var cls = isF ? 'fold' + (catExpanded[n.id] ? ' open' : '') : '';
+    if (!catEmptySet(own)) cls += ' set';
+    var nm;
+    if (isF) {
+      var cnt = countItems(n);
+      nm = '<span class="ind" style="width:' + (depth * 16) + 'px"></span><span class="arr">▶</span>📁 ' + esc(n.name) +
+        '<span class="fcnt">' + cnt + '</span>' + (!catEmptySet(own) ? '<span class="ftag">для всей папки</span>' : '');
+    } else {
+      nm = '<span class="ind" style="width:' + (depth * 16 + 18) + 'px"></span>' + esc(n.name);
+      if (opt.path) nm = esc(n.name) + '<span class="path">' + esc(opt.path) + '</span>';
     }
-    return '<tr data-ci="' + i + '"' + (x.active ? '' : ' class="off"') + '>' +
-      '<td class="c keep"><input type="checkbox" data-cf="active"' + (x.active ? ' checked' : '') + '></td>' +
-      '<td class="c"><input type="checkbox" data-cf="isDefault"' + (x.isDefault ? ' checked' : '') + '></td>' +
-      '<td><input type="text" data-cf="name" value="' + esc(x.name) + '"></td>' +
-      '<td><input type="text" data-cf="article" value="' + esc(x.article) + '" placeholder="—"></td>' +
-      '<td>' + sizeSel + '</td>' +
-      '<td class="ro">' + (isPlate ? fmtNum(CJ.sizeM2(x.size), 2) : '') + '</td>' +
-      '<td>' + unitSel + '</td>' +
-      '<td class="c"><input type="checkbox" data-cf="packMultiple"' + (x.packMultiple ? ' checked' : '') + '></td>' +
-      '<td>' + pack + '</td>' +
-      '<td><input type="text" class="r" data-cf="price" value="' + fmtNum(x.price, 2) + '" placeholder="0"></td>' +
-      '<td><input type="text" data-cf="note" value="' + esc(x.note) + '" placeholder="—"></td>' +
-      '<td><button type="button" class="cat-del" data-cdel="' + i + '" title="Удалить позицию">✕</button></td>' +
+    // м² в шт.
+    var m2ph = inh('m2PerPiece') !== undefined ? fmtN(inh('m2PerPiece'), 4) + (e.from.m2PerPiece === 'auto' ? ' авто' : '') : '';
+    // Кратно пачке
+    var pmInh = inh('packMultiple');
+    var pmLbl = pmInh === true ? '↑ да' : pmInh === false ? '↑ нет' : '—';
+    var pm = '<select data-cf="packMultiple"><option value=""' + (own.packMultiple === undefined ? ' selected' : '') + '>' + pmLbl + '</option>' +
+      '<option value="1"' + (own.packMultiple === true ? ' selected' : '') + '>да</option>' +
+      '<option value="0"' + (own.packMultiple === false ? ' selected' : '') + '>нет</option></select>';
+    // В пачке
+    var puEff = own.packUnit !== undefined ? own.packUnit : (inh('packUnit') || 'unit');
+    var uLabel = isF ? 'ед.' : (unit || 'ед.');
+    var pq = '<div class="cat-pack"><input type="text" class="r" data-cf="packQty" value="' + fmtN(own.packQty) + '" placeholder="' + fmtN(inh('packQty')) + '"' + (e.from.packQty === 'auto' ? ' title="Определено по названию"' : '') + '>' +
+      '<select data-cf="packUnit"><option value="unit"' + (puEff === 'unit' ? ' selected' : '') + '>' + esc(uLabel) + '</option><option value="шт"' + (puEff === 'шт' ? ' selected' : '') + '>шт</option></select></div>';
+    if (!isF && e.packMultiple && e.packQty > 0) {
+      var pr = CJ.catalogPackRound(e, 1);
+      var hint = e.packUnit === 'шт' && e.m2PerPiece > 0 && /м2|м²/i.test(unit) ? '= ' + fmtN(pr.perPack, 2) + ' ' + unit : (e.packUnit === 'unit' && e.m2PerPiece > 0 && !/м2|м²/i.test(unit) ? '' : '');
+      if (e.packUnit === 'unit' && e.m2PerPiece > 0 && /м2|м²/i.test(unit)) hint = '≈ ' + Math.round(e.packQty / e.m2PerPiece) + ' шт';
+      if (hint) pq += '<div class="hint">' + hint + '</div>';
+    }
+    return '<tr data-code="' + esc(n.id) + '" class="' + cls + '">' +
+      '<td class="nm" title="' + esc(n.name) + '">' + nm + '</td>' +
+      '<td class="code">' + esc(n.id) + '</td>' +
+      '<td class="u">' + esc(unit) + '</td>' +
+      '<td><input type="text" class="r" data-cf="m2PerPiece" value="' + fmtN(own.m2PerPiece) + '" placeholder="' + esc(m2ph) + '"></td>' +
+      '<td>' + pm + '</td>' +
+      '<td>' + pq + '</td>' +
+      '<td><input type="text" class="r" data-cf="price" value="' + fmtN(own.price, 2) + '" placeholder="' + fmtN(inh('price'), 2) + '"></td>' +
+      '<td><input type="text" data-cf="note" value="' + esc(own.note || '') + '" placeholder="' + esc(inh('note') || '') + '"></td>' +
+      '<td>' + (!catEmptySet(own) ? '<button type="button" class="cat-clr" data-clr="1" title="Убрать собственные настройки">✕</button>' : '') + '</td>' +
     '</tr>';
   }
+  var _cntCache = {};
+  function countItems(n) {
+    if (_cntCache[n.id] !== undefined) return _cntCache[n.id];
+    var c = 0; (n.children || []).forEach(function (ch) { c += (ch.children && ch.children.length) || ch.type === 'folder' ? countItems(ch) : 1; });
+    return (_cntCache[n.id] = c);
+  }
   function renderCatalog() {
+    if (!catLoaded) return;
+    catInfo();
+    var idx = CJ.nomIndex();
+    var body = $('catBody');
     var q = $('catSearch').value.trim().toLowerCase();
-    var tf = $('catTypeFilter').value;
-    var af = $('catActiveFilter').value;
-    var html = '';
-    var shown = 0;
-    CJ.CATALOG_TYPES.forEach(function (t) {
-      if (tf && tf !== t.key) return;
-      var list = catItems.filter(function (x) {
-        if (x.type !== t.key) return false;
-        if (af === '1' && !x.active) return false;
-        if (af === '0' && x.active) return false;
-        if (q && (x.name + ' ' + x.article + ' ' + x.note).toLowerCase().indexOf(q) < 0) return false;
-        return true;
-      });
-      if (!list.length) return;
-      var title = { plate: 'Плиты', light: 'Светильники', profile: 'Профили', other: 'Прочее' }[t.key];
-      html += '<tr class="cat-group"><td colspan="12">' + title + ' · ' + list.length + '</td></tr>';
-      list.forEach(function (x) { html += catRowHtml(x); shown++; });
-    });
-    $('catBody').innerHTML = html;
-    $('catEmpty').style.display = shown ? 'none' : 'block';
-    $('catCount').textContent = catItems.length;
+    var flt = $('catFilter').value;
+    var html = '', shown = 0, total = 0;
+    $('catMore').style.display = 'none';
     $('catWhere').textContent = CJ.isApi()
-      ? ' Справочник общий: хранится на сервере и одинаков у всех сотрудников.'
-      : ' Сейчас справочник хранится только в этом браузере — для общего справочника включите серверный режим в «Настройках».';
-  }
-  function catSetField(x, f, el) {
-    if (f === 'active' || f === 'isDefault' || f === 'packMultiple') {
-      x[f] = el.checked;
-      if (f === 'isDefault' && x.isDefault) {
-        catItems.forEach(function (o) { if (o !== x && o.type === x.type && o.size === x.size) o.isDefault = false; });
-      }
-      if (f === 'packMultiple' && x.packMultiple && x.type === 'plate' && !x.packQty) x.packUnit = 'шт.';
-      return true; // нужна перерисовка
+      ? ' Настройки общие: хранятся на сервере и одинаковы у всех сотрудников.'
+      : ' Сейчас настройки хранятся только в этом браузере — для общего справочника включите серверный режим в «Настройках».';
+    if (!idx) {
+      body.innerHTML = '';
+      $('catEmpty').style.display = 'block';
+      $('catEmptyText').innerHTML = 'Номенклатура не загружена.<br>Нажмите «⟳ Обновить из 1С» или откройте XML-файл выгрузки.';
+      return;
     }
-    if (f === 'packQty' || f === 'price') { x[f] = parseNum(el.value); return f === 'packQty'; }
-    if (f === 'size') { x.size = el.value; x.m2PerPiece = x.type === 'plate' ? CJ.sizeM2(x.size) : 0; return true; }
-    if (f === 'packUnit') { x.packUnit = el.value; return true; }
-    x[f] = el.value;
-    return false;
+    if (flt === 'orphan') {
+      Object.keys(catWork).forEach(function (code) {
+        if (idx.byId[code] || catEmptySet(catWork[code])) return;
+        total++;
+        html += rowHtml({ id: code, name: '⚠ Нет в 1С (код ' + code + ')', type: 'item', unit: '' }, 0, { path: 'позиция удалена из выгрузки или код изменился' }).replace('class="', 'class="orph ');
+        shown++;
+      });
+    } else if (catView === 'tree' && !q && !flt) {
+      (function walk(nodes, depth) {
+        nodes.forEach(function (n) {
+          html += rowHtml(n, depth); shown++;
+          var isF = n.type === 'folder' || (n.children && n.children.length);
+          if (isF && catExpanded[n.id]) walk(n.children || [], depth + 1);
+        });
+      })(NOMENCLATURE_TREE(), 0);
+    } else if (catView === 'tree') {
+      // поиск/фильтр в дереве: показываем совпавшие позиции с их папками
+      var map = catWork;
+      var keep = {};
+      idx.items.forEach(function (n) {
+        if (q && (n.name + ' ' + n.id + ' ' + (n.article || '')).toLowerCase().indexOf(q) < 0) return;
+        if (!matchesFilter(n, effOf(n.id), flt)) return;
+        total++;
+        if (total > catLimit) return;
+        keep[n.id] = true;
+        var p = idx.parent[n.id]; while (p) { keep[p] = true; p = idx.parent[p]; }
+      });
+      (function walk(nodes, depth) {
+        nodes.forEach(function (n) {
+          if (!keep[n.id]) return;
+          html += rowHtml(n, depth); shown++;
+          if (n.children) walk(n.children, depth + 1);
+        });
+      })(NOMENCLATURE_TREE(), 0);
+      html = html.replace(/class="fold/g, 'class="fold open');
+    } else {
+      // списком
+      var list = idx.items.filter(function (n) {
+        if (q && (n.name + ' ' + n.id + ' ' + (n.article || '')).toLowerCase().indexOf(q) < 0) return false;
+        return matchesFilter(n, effOf(n.id), flt);
+      });
+      total = list.length;
+      list.slice(0, catLimit).forEach(function (n) {
+        var path = CJ.nomPath(n.id).map(function (f) { return f.name; }).join(' › ');
+        html += rowHtml(n, 0, { path: path }); shown++;
+      });
+    }
+    body.innerHTML = html;
+    $('catEmpty').style.display = shown ? 'none' : 'block';
+    $('catEmptyText').textContent = 'Ничего не найдено.';
+    if (total > catLimit && (q || flt || catView === 'list')) {
+      $('catMore').style.display = 'block';
+      $('btnCatMore').textContent = 'Показано ' + Math.min(catLimit, total) + ' из ' + total + ' — показать ещё';
+    }
   }
-  function catAdd(type) {
-    var names = { plate: 'Новая плита 600×600', light: 'Новый светильник 600×600', profile: 'Новый профиль', other: 'Новая позиция' };
-    var x = CJ.catalogNormalize({ type: type, name: names[type], active: true });
-    catItems.push(x);
-    $('catTypeFilter').value = '';
-    $('catSearch').value = '';
-    renderCatalog();
-    catMarkDirty();
-    var tr = $('catBody').querySelector('tr[data-ci="' + catItems.indexOf(x) + '"]');
-    if (tr) { var inp = tr.querySelector('input[data-cf="name"]'); inp.focus(); inp.select(); tr.scrollIntoView({ block: 'center' }); }
+  function NOMENCLATURE_TREE() {
+    var idx = CJ.nomIndex(); if (!idx) return [];
+    var roots = []; idx.folders.concat(idx.items).forEach(function (n) { if (!idx.parent[n.id]) roots.push(n); });
+    var coll = new Intl.Collator('ru', { numeric: true });
+    return roots.sort(function (a, b) { var af = !!a.children, bf = !!b.children; return af !== bf ? (af ? -1 : 1) : coll.compare(a.name, b.name); });
+  }
+  function catSetField(code, f, el) {
+    var o = catWork[code] ? JSON.parse(JSON.stringify(catWork[code])) : { code: code };
+    var idx = CJ.nomIndex();
+    if (idx && idx.byId[code] && (idx.byId[code].type === 'folder' || idx.byId[code].children)) o.folder = true;
+    var v = el.value;
+    if (f === 'packMultiple') { if (v === '') delete o.packMultiple; else o.packMultiple = v === '1'; }
+    else if (f === 'packUnit') { o.packUnit = v; }
+    else if (f === 'note') { if (v.trim()) o.note = v.trim(); else delete o.note; }
+    else {
+      var t = String(v).trim();
+      if (t === '') delete o[f]; else { var n = parseNum(t); if (isFinite(n) && n > 0) o[f] = n; else delete o[f]; }
+    }
+    // единица пачки сама по себе не настройка — храним только если задано количество в пачке
+    if (o.packUnit !== undefined && o.packQty === undefined && f !== 'packUnit') { /* оставляем выбор */ }
+    if (catEmptySet(o)) delete catWork[code]; else catWork[code] = o;
   }
   function catSave() {
-    // проверка: пустые названия и дубли
-    var seen = {};
-    for (var i = 0; i < catItems.length; i++) {
-      var nm = String(catItems[i].name || '').trim();
-      if (!nm) { notify('У позиции нет названия', true); return; }
-      var k = nm.toLowerCase();
-      if (seen[k]) { notify('Повторяется название: ' + nm, true); return; }
-      seen[k] = true;
-      if (catItems[i].packMultiple && !(CJ.num(catItems[i].packQty) > 0)) { notify('Укажите, сколько в пачке: ' + nm, true); return; }
-    }
+    var items = Object.keys(catWork).map(function (k) { return catWork[k]; }).filter(function (o) { return !catEmptySet(o); });
     var btn = $('btnCatSave');
     btn.disabled = true;
-    CJ.catalogSave(catItems).then(function (r) {
-      catItems = CJ.catalog();
-      catBase = JSON.stringify(catItems);
-      catMarkDirty();
-      renderCatalog();
-      fillCatDatalist();
+    CJ.catalogSave(items).then(function (r) {
+      catWork = CJ.catalogMap(); catBase = catSnapshot(); catMarkDirty(); renderCatalog(); fillCatDatalist();
       notify(r && r.local ? '✓ Справочник сохранён в этом браузере' : '✓ Справочник сохранён на сервере');
     }).catch(function (e) {
-      catBase = JSON.stringify(CJ.catalog());
-      catMarkDirty();
+      catBase = catSnapshot(); catMarkDirty();
       notify('Сохранено локально, на сервер не ушло: ' + (e && e.message || e), true);
     }).then(function () { btn.disabled = false; });
   }
   function catReload() {
     if (catIsDirty() && !confirm('Несохранённые изменения справочника будут потеряны. Продолжить?')) return;
-    var p = CJ.isApi() ? CJ.catalogSync() : Promise.resolve();
-    p.then(function () { catLoadFromCore(); notify('Справочник обновлён'); })
-     .catch(function (e) { catLoadFromCore(); notify('Сервер недоступен: ' + (e && e.message || e), true); });
+    $('catInfo').textContent = 'Загружаю выгрузку 1С…';
+    var p1 = CJ.nomLoad(true);
+    var p2 = CJ.isApi() ? CJ.catalogSync() : Promise.resolve();
+    Promise.all([p1.catch(function (e) { return { err: e }; }), p2.catch(function (e) { return { err: e }; })]).then(function (r) {
+      _cntCache = {};
+      catLoadFromCore(); fillCatDatalist();
+      if (r[0] && r[0].err) notify('Выгрузка 1С не загрузилась: ' + r[0].err.message, true);
+      else if (r[1] && r[1].err) notify('Сервер недоступен: ' + r[1].err.message, true);
+      else notify('Справочник обновлён');
+    });
   }
   function showTab(name) {
-    if (name !== 'catalog' && catIsDirty() && catLoaded) {
-      if (!confirm('В справочнике есть несохранённые изменения. Сохранить?')) { catItems = JSON.parse(catBase); catMarkDirty(); }
-      else catSave();
+    if (name === 'catalog' && !coreHasCatalog()) {
+      notify('Загружена старая версия journal-core.js — обновите файл в репозитории Cubica-journal и нажмите Ctrl+F5', true);
+      $('catCount').textContent = '!';
+      return;
+    }
+    if (name !== 'catalog' && catIsDirty()) {
+      if (confirm('В справочнике есть несохранённые изменения. Сохранить?')) catSave();
+      else { catWork = JSON.parse(catBase); catMarkDirty(); }
     }
     document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === name); });
     $('tabJournal').hidden = name !== 'journal';
     $('tabCatalog').hidden = name !== 'catalog';
-    if (name === 'catalog') { if (!catLoaded) catLoadFromCore(); else renderCatalog(); }
+    if (name === 'catalog') {
+      if (!catLoaded) {
+        catWork = CJ.catalogMap(); catBase = catSnapshot(); catLoaded = true;
+        $('catInfo').textContent = 'Загружаю выгрузку 1С…';
+        CJ.nomLoad().then(function () { _cntCache = {}; renderCatalog(); fillCatDatalist(); })
+          .catch(function (e) { renderCatalog(); notify('Выгрузка 1С не загрузилась: ' + e.message, true); });
+        renderCatalog();
+      } else renderCatalog();
+    }
     try { history.replaceState(null, '', name === 'catalog' ? '#catalog' : location.pathname + location.search); } catch (e) {}
   }
   function bindCatalog() {
     document.querySelectorAll('.tab').forEach(function (b) {
       b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); });
     });
-    document.querySelectorAll('[data-cat-add]').forEach(function (b) {
-      b.addEventListener('click', function () { catAdd(b.getAttribute('data-cat-add')); });
+    $('catView').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-view]'); if (!b) return;
+      catView = b.getAttribute('data-view'); catLimit = 300;
+      $('catView').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      $('btnCatExpand').disabled = $('btnCatCollapse').disabled = catView !== 'tree';
+      renderCatalog();
     });
+    $('btnCatExpand').addEventListener('click', function () {
+      var idx = CJ.nomIndex(); if (!idx) return;
+      idx.folders.forEach(function (f) { catExpanded[f.id] = true; }); renderCatalog();
+    });
+    $('btnCatCollapse').addEventListener('click', function () { catExpanded = {}; renderCatalog(); });
+    $('btnCatMore').addEventListener('click', function () { catLimit += 300; renderCatalog(); });
     $('btnCatSave').addEventListener('click', catSave);
     $('btnCatReload').addEventListener('click', catReload);
-    ['catSearch', 'catTypeFilter', 'catActiveFilter'].forEach(function (id) {
-      $(id).addEventListener(id === 'catSearch' ? 'input' : 'change', renderCatalog);
+    $('btnCatFile').addEventListener('click', function () { $('catFile').click(); });
+    $('catFile').addEventListener('change', function () {
+      var f = this.files && this.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try { CJ.nomLoadText(rd.result); _cntCache = {}; renderCatalog(); fillCatDatalist(); notify('✓ Выгрузка 1С загружена из файла (в этом браузере)'); }
+        catch (e) { notify('Не удалось прочитать XML: ' + e.message, true); }
+      };
+      rd.readAsText(f, 'utf-8');
+      this.value = '';
     });
-    function onEdit(e) {
-      var el = e.target.closest('[data-cf]');
-      if (!el) return;
-      var tr = el.closest('tr[data-ci]');
-      var x = catItems[parseInt(tr.getAttribute('data-ci'), 10)];
-      if (!x) return;
-      var redraw = catSetField(x, el.getAttribute('data-cf'), el);
-      if (redraw && e.type === 'change') {
+    var tmr = null;
+    $('catSearch').addEventListener('input', function () { clearTimeout(tmr); tmr = setTimeout(function () { catLimit = 300; renderCatalog(); }, 200); });
+    $('catFilter').addEventListener('change', function () { catLimit = 300; renderCatalog(); });
+    $('catBody').addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-code]'); if (!tr) return;
+      if (e.target.closest('button[data-clr]')) {
+        delete catWork[tr.getAttribute('data-code')]; catMarkDirty(); renderCatalog(); return;
+      }
+      if (tr.classList.contains('fold') && (e.target.closest('td.nm'))) {
+        var c = tr.getAttribute('data-code');
+        if (catExpanded[c]) delete catExpanded[c]; else catExpanded[c] = true;
+        if ($('catSearch').value.trim() || $('catFilter').value) return;
         renderCatalog();
       }
-      catMarkDirty();
-    }
-    $('catBody').addEventListener('input', onEdit);
-    $('catBody').addEventListener('change', onEdit);
-    $('catBody').addEventListener('click', function (e) {
-      var b = e.target.closest('button[data-cdel]');
-      if (!b) return;
-      var x = catItems[parseInt(b.getAttribute('data-cdel'), 10)];
-      if (!x || !confirm('Удалить «' + x.name + '» из справочника?\nЕсли позиция может понадобиться позже — лучше снимите галочку «Акт.».')) return;
-      catItems.splice(catItems.indexOf(x), 1);
-      renderCatalog();
-      catMarkDirty();
+    });
+    $('catBody').addEventListener('input', function (e) {
+      var el = e.target.closest('[data-cf]'); if (!el || el.tagName === 'SELECT') return;
+      catSetField(el.closest('tr').getAttribute('data-code'), el.getAttribute('data-cf'), el); catMarkDirty();
+    });
+    $('catBody').addEventListener('change', function (e) {
+      var el = e.target.closest('[data-cf]'); if (!el) return;
+      var tr = el.closest('tr'), code = tr.getAttribute('data-code');
+      catSetField(code, el.getAttribute('data-cf'), el); catMarkDirty();
+      // перерисовываем, чтобы показать унаследованные значения у вложенных позиций
+      var scrollY = window.scrollY; renderCatalog(); window.scrollTo(0, scrollY);
     });
     window.addEventListener('beforeunload', function (e) {
-      if (catLoaded && catIsDirty()) { e.preventDefault(); e.returnValue = ''; }
+      if (catIsDirty()) { e.preventDefault(); e.returnValue = ''; }
     });
     CJ.on('catalog-changed', function (e) {
-      if (e && e.external && !catIsDirty()) catLoadFromCore();
+      if (e && e.external && !catIsDirty() && catLoaded) catLoadFromCore();
       else fillCatDatalist();
     });
+    CJ.on('nomenclature-changed', function () { _cntCache = {}; if (catLoaded && !$('tabCatalog').hidden) renderCatalog(); fillCatDatalist(); });
   }
 
   function boot() {
@@ -1544,7 +1687,7 @@ $('mStatus').addEventListener('change', function () {
     bind();
     bindCatalog();
     render();
-    fillCatDatalist();
+    if (coreHasCatalog()) CJ.nomLoad().then(fillCatDatalist).catch(function () {}); else fillCatDatalist();
 
     if (CJ.isApi()) {
       doSync(true);
