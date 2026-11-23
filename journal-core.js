@@ -637,7 +637,7 @@
   var K_CATALOG = 'cubica_catalog_v2';
   var K_NOM_CACHE = 'cubica_nomenclature_v2';
   var NOM_URL_DEFAULT = 'https://6471811-source.github.io/Cubica-nomenclature/nomenclature.xml';
-  var CAT_FIELDS = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'price', 'note']; // запас % задаётся в i5, не в справочнике
+  var CAT_FIELDS = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'pcsPerUnit', 'price', 'note']; // запас % задаётся в i5, не в справочнике
   var NOM = null, NOM_INDEX = null, nomLoading = null;
 
   function nomUrl() { var s = loadSettings(); return (s.urls && s.urls.nomenclature) || NOM_URL_DEFAULT; }
@@ -743,6 +743,7 @@
     if (x.name) o.name = String(x.name);
     if (x.unit) o.unit = String(x.unit);
     if (num(x.m2PerPiece, 0) > 0) o.m2PerPiece = num(x.m2PerPiece, 0);
+    if (num(x.pcsPerUnit, 0) > 0) o.pcsPerUnit = num(x.pcsPerUnit, 0);
     return o;
   }
   function cleanSetting(x) {
@@ -755,6 +756,7 @@
     if (x.packQty !== undefined && x.packQty !== null && x.packQty !== '' && num(x.packQty, 0) > 0) o.packQty = num(x.packQty, 0);
     if (x.packUnit === 'шт' || x.packUnit === 'unit') o.packUnit = x.packUnit;
     if (x.m2PerPiece !== undefined && x.m2PerPiece !== null && x.m2PerPiece !== '' && num(x.m2PerPiece, 0) > 0) o.m2PerPiece = num(x.m2PerPiece, 0);
+    if (x.pcsPerUnit !== undefined && x.pcsPerUnit !== null && x.pcsPerUnit !== '' && num(x.pcsPerUnit, 0) > 0) o.pcsPerUnit = num(x.pcsPerUnit, 0);
     if (x.price !== undefined && x.price !== null && x.price !== '' && num(x.price, 0) > 0) o.price = num(x.price, 0);
     if (x.note) o.note = String(x.note);
     return o;
@@ -814,6 +816,20 @@
     var snap = function (v) { v = Number(v); var r = Math.round(v / 600) * 600; return (r > 0 && Math.abs(v - r) <= 10) ? r : v; };
     return +((snap(m[1]) * snap(m[2])) / 1e6).toFixed(4);
   }
+  // Сколько штук в одной единице 1С: «тыс.шт» → 1000, «сот.шт» → 100,
+  // «упак/пач/кор/компл» → число штук из названия «(100шт/ упак)». Для «шт» — 1.
+  function autoPcsPerUnit(unit, name) {
+    var u = String(unit || '').toLowerCase().replace(/\s+/g, '');
+    if (!u) return 0;
+    if (/^шт/.test(u)) return 1;
+    if (/^тыс/.test(u)) return 1000;
+    if (/^сот/.test(u)) return 100;
+    if (/^(упак|уп\.?$|уп$|пач|кор|компл|наб|блок|рул)/.test(u)) {
+      var m = String(name || '').match(/(\d+)\s*шт\.?\s*(?:\/|в)\s*(?:упак|уп|пач|кор|компл|наб)/i) || String(name || '').match(/[(]\s*(\d+)\s*шт/i);
+      if (m && Number(m[1]) > 0) return Number(m[1]);
+    }
+    return 0;
+  }
   // Итоговые настройки позиции: своё → папка → папка выше … → авто
   function catalogResolve(code, map) {
     map = map || catalogMap();
@@ -831,6 +847,10 @@
       var auto = sizeM2(node.name);
       if (auto) { eff.m2PerPiece = auto; from.m2PerPiece = 'auto'; }
     }
+    if (eff.pcsPerUnit === undefined && node && node.type !== 'folder') {
+      var ap = autoPcsPerUnit(node.unit, node.name);
+      if (ap > 1) { eff.pcsPerUnit = ap; from.pcsPerUnit = 'auto'; }
+    }
     // пачка из названия: «(18 шт.)», «6,48 кв.м./пач», «(11,52 м2)»
     if (eff.packQty === undefined && node && node.type !== 'folder') {
       var nm = node.name, unitIsM2 = /м2|м²/i.test(node.unit || '');
@@ -847,7 +867,7 @@
       code: code, node: node, name: node ? node.name : '', unit: node ? (node.unit || '') : '',
       article: node ? (node.article || '') : '', isFolder: !!(node && node.type === 'folder'),
       packMultiple: eff.packMultiple === true, packQty: num(eff.packQty, 0), packUnit: eff.packUnit,
-      m2PerPiece: num(eff.m2PerPiece, 0),
+      m2PerPiece: num(eff.m2PerPiece, 0), pcsPerUnit: num(eff.pcsPerUnit, 0),
       price: num(eff.price, 0), note: eff.note || '', from: from, own: map[code] || null
     };
   }
@@ -866,10 +886,12 @@
     if (!eff || !eff.packMultiple || !(eff.packQty > 0)) return res;
     var perPack = eff.packQty;
     if (eff.packUnit === 'шт' && eff.m2PerPiece > 0 && /м2|м²/i.test(eff.unit || '')) perPack = eff.packQty * eff.m2PerPiece; // пачка в штуках, позиция в м²
-    res.perPack = +perPack.toFixed(4);
+    else if (eff.packUnit === 'шт' && eff.pcsPerUnit > 1 && unitKind(eff.unit) !== 'pcs') perPack = eff.packQty / eff.pcsPerUnit; // пачка в штуках, позиция в тыс.шт / упак
+    res.perPack = +perPack.toFixed(6);
     res.packs = Math.ceil(+(qty / perPack).toFixed(6));
     res.ship = +(res.packs * perPack).toFixed(4);
     res.added = +(res.ship - qty).toFixed(4);
+    if (eff.packUnit === 'шт') res.packPcs = eff.packQty;
     res.rounded = res.added > 0;
     return res;
   }
@@ -916,7 +938,7 @@
     var out = {};
     catalogRaw().forEach(function (o) {
       if (!isRoleCode(o.code)) return;
-      out[o.code.slice(5)] = { code: o.nomCode, name: o.name || '', unit: o.unit || '', m2PerPiece: o.m2PerPiece || 0 };
+      out[o.code.slice(5)] = { code: o.nomCode, name: o.name || '', unit: o.unit || '', m2PerPiece: o.m2PerPiece || 0, pcsPerUnit: o.pcsPerUnit || 0 };
     });
     return out;
   }
@@ -924,7 +946,7 @@
     var roleItems = [];
     Object.keys(map || {}).forEach(function (k) {
       var b = map[k]; if (!b || !b.code) return;
-      roleItems.push({ code: 'role:' + k, nomCode: b.code, name: b.name, unit: b.unit, m2PerPiece: b.m2PerPiece });
+      roleItems.push({ code: 'role:' + k, nomCode: b.code, name: b.name, unit: b.unit, m2PerPiece: b.m2PerPiece, pcsPerUnit: b.pcsPerUnit });
     });
     return catalogSave(catalogAll(), roleItems);
   }
@@ -945,7 +967,24 @@
     if (a === 'pcs' && b === 'mp' && opt.lenM > 0) return r2(qty * opt.lenM);
     if (a === 'm2' && b === 'pcs' && opt.m2PerPiece > 0) return Math.ceil(+(qty / opt.m2PerPiece).toFixed(6));
     if (a === 'mp' && b === 'pcs' && opt.lenM > 0) return Math.ceil(+(qty / opt.lenM).toFixed(6));
+    // штуки ↔ «крупная» единица (тыс.шт, упак …): по полю «шт в единице»
+    var r3 = function (v) { return Math.round(v * 1000) / 1000; };
+    if (a === 'pcs' && b !== 'm2' && b !== 'mp' && opt.pcsPerUnit > 1) return r3(qty / opt.pcsPerUnit);
+    if (b === 'pcs' && a !== 'm2' && a !== 'mp' && opt.fromPcsPerUnit > 1) return Math.ceil(+(qty * opt.fromPcsPerUnit).toFixed(6));
     return qty;
+  }
+  // шт в единице 1С: справочник (своё/папка/авто) → снимок привязки → по единице и названию
+  function pcsFor(code, unit, name, snap) {
+    var k = 0;
+    if (code && NOM_INDEX && NOM_INDEX.byId[code]) k = catalogResolve(code).pcsPerUnit;
+    if (!k && snap) k = num(snap, 0);
+    if (!k) k = autoPcsPerUnit(unit, name);
+    return k > 1 ? k : 0;
+  }
+  // параметры пересчёта для позиции 1С по роли
+  function unitOpt(code, name, unit, def, snap) {
+    snap = snap || {};
+    return { m2PerPiece: m2For(code, name, def, snap.m2PerPiece), lenM: def && def.lenM, pcsPerUnit: pcsFor(code, unit, name, snap.pcsPerUnit) };
   }
   // m² одной штуки для позиции 1С: справочник → снимок привязки → по названию → из роли
   function m2For(code, name, def, snap) {
@@ -966,7 +1005,7 @@
       row.label = b.name || fallbackLabel || (def && def.def) || '';
       row.unit = b.unit || 'шт.';
       row.nomId = b.code;
-      row.qtyCalc = convertQty(qty, calcUnit, row.unit, { m2PerPiece: m2For(b.code, b.name, def, b.m2PerPiece), lenM: def && def.lenM });
+      row.qtyCalc = convertQty(qty, calcUnit, row.unit, unitOpt(b.code, b.name, row.unit, def, b));
     } else {
       row.label = fallbackLabel || (def && def.def) || roleKey;
       row.unit = 'шт.';
@@ -976,7 +1015,7 @@
   }
 
   var CJ = {
-    version: '1.6.0',
+    version: '1.7.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -1003,7 +1042,7 @@
     nomLoad: nomLoad, nomLoadText: nomLoadText, nomIndex: nomIndex, nomPath: nomPath, nomUrl: nomUrl,
     sizeM2: sizeM2,
     ROLE_DEFS: ROLE_DEFS, roleDefs: roleDefs, roleDef: roleDef, roleByLabel: roleByLabel,
-    rolesMap: rolesMap, rolesSave: rolesSave, roleRow: roleRow, convertQty: convertQty, unitKind: unitKind, m2For: m2For
+    rolesMap: rolesMap, rolesSave: rolesSave, roleRow: roleRow, convertQty: convertQty, unitKind: unitKind, m2For: m2For, pcsFor: pcsFor, unitOpt: unitOpt, autoPcsPerUnit: autoPcsPerUnit
   };
 
   global.addEventListener('storage', function (e) {
