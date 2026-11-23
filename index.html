@@ -110,6 +110,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 .cat-table tbody tr.off td.keep{opacity:1}
 .cat-table td{padding:5px 6px}
 .cat-table td.c{text-align:center}
+.cat-table .na{display:block;text-align:right;color:#c3c3c3;padding:0 7px}
 .cat-table td.ro{color:#7a8a99;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:12.5px}
 .cat-group td{background:#fafbfc;font-size:10.5px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.7px;padding:9px 14px !important}
 .cat-dirty{display:none;font-size:12px;font-weight:700;color:#b26a00}
@@ -328,6 +329,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
           <th style="width:96px">Код</th>
           <th style="width:58px">Ед.</th>
           <th style="width:86px;text-align:right" title="Площадь одной штуки — для плит. Определяется по размеру в названии, можно задать вручную">м² в шт.</th>
+          <th style="width:86px;text-align:right" title="Сколько штук в одной единице 1С: тыс.шт. — 1000, упаковка — 100 и т.п. Нужно, чтобы штуки из калькулятора пересчитывались в единицу 1С. Для «тыс.шт.» и упаковок с «(100 шт/упак)» в названии определяется само">шт в ед.</th>
           <th style="width:92px">Кратно пачке</th>
           <th style="width:150px">В пачке</th>
           <th style="width:96px;text-align:right">Рек. цена</th>
@@ -342,7 +344,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   </section>
   <div class="cat-help">
     <b>Как это работает.</b> Названия, коды, папки и единицы берутся из выгрузки 1С — их меняют только в 1С.
-    В справочнике вы задаёте то, чего нет в 1С: кратность пачке, сколько в пачке, м² в одной штуке и рекомендованную цену. Запас в процентах выставляется в счёте (i5).
+    В справочнике вы задаёте то, чего нет в 1С: кратность пачке, сколько в пачке, м² в одной штуке, сколько штук в единице 1С (для «тыс.шт.», упаковок — чтобы штуки из калькулятора пересчитывались в единицу 1С) и рекомендованную цену. Запас в процентах выставляется в счёте (i5).
     Серым курсивом — значение, унаследованное от папки или определённое по названию (размер плиты, «18 шт.», «6,48 м2»); чтобы закрепить — впишите своё.
     <b>Настройка на папке</b> действует на все позиции внутри (серым — унаследованное значение); если у позиции задано своё — оно главнее.
     ✕ в строке убирает собственные настройки позиции (останутся унаследованные).
@@ -1436,7 +1438,7 @@ $('mStatus').addEventListener('change', function () {
   var catView = 'tree';
   var catExpanded = {};
   var catLimit = 300;
-  var CAT_F = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'price', 'note'];
+  var CAT_F = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'pcsPerUnit', 'price', 'note'];
 
   function coreHasCatalog() { return typeof CJ.catalogResolve === 'function' && typeof CJ.nomLoad === 'function'; }
   function catSnapshot() { var keys = Object.keys(catWork).sort(); var o = {}; keys.forEach(function (k) { if (!catEmptySet(catWork[k])) o[k] = catWork[k]; }); return JSON.stringify(o); }
@@ -1506,6 +1508,9 @@ $('mStatus').addEventListener('change', function () {
     }
     // м² в шт.
     var m2ph = inh('m2PerPiece') !== undefined ? fmtN(inh('m2PerPiece'), 4) + (e.from.m2PerPiece === 'auto' ? ' авто' : '') : '';
+    // шт в единице
+    var pcsph = inh('pcsPerUnit') !== undefined ? fmtN(inh('pcsPerUnit'), 3) + (e.from.pcsPerUnit === 'auto' ? ' авто' : '') : '';
+    var pcsOn = isF || CJ.unitKind(unit) !== 'pcs' && CJ.unitKind(unit) !== 'm2' && CJ.unitKind(unit) !== 'mp';
     // Кратно пачке
     var pmInh = inh('packMultiple');
     var pmLbl = pmInh === true ? '↑ да' : pmInh === false ? '↑ нет' : '—';
@@ -1521,6 +1526,10 @@ $('mStatus').addEventListener('change', function () {
       var pr = CJ.catalogPackRound(e, 1);
       var hint = e.packUnit === 'шт' && e.m2PerPiece > 0 && /м2|м²/i.test(unit) ? '= ' + fmtN(pr.perPack, 2) + ' ' + unit : (e.packUnit === 'unit' && e.m2PerPiece > 0 && !/м2|м²/i.test(unit) ? '' : '');
       if (e.packUnit === 'unit' && e.m2PerPiece > 0 && /м2|м²/i.test(unit)) hint = '≈ ' + Math.round(e.packQty / e.m2PerPiece) + ' шт';
+      if (e.pcsPerUnit > 1 && CJ.unitKind(unit) !== 'pcs' && !/м2|м²/i.test(unit)) {
+        if (e.packUnit === 'шт') hint = '= ' + fmtN(pr.perPack, 4) + ' ' + unit;
+        else hint = '= ' + fmtN(e.packQty * e.pcsPerUnit, 2) + ' шт';
+      }
       if (hint) pq += '<div class="hint">' + hint + '</div>';
     }
     return '<tr data-code="' + esc(n.id) + '" class="' + cls + '">' +
@@ -1528,6 +1537,7 @@ $('mStatus').addEventListener('change', function () {
       '<td class="code">' + esc(n.id) + '</td>' +
       '<td class="u">' + esc(unit) + '</td>' +
       '<td><input type="text" class="r" data-cf="m2PerPiece" value="' + fmtN(own.m2PerPiece) + '" placeholder="' + esc(m2ph) + '"></td>' +
+      '<td>' + (pcsOn ? '<input type="text" class="r" data-cf="pcsPerUnit" value="' + fmtN(own.pcsPerUnit, 3) + '" placeholder="' + esc(pcsph) + '">' : '<span class="na" title="Позиция в штуках, м² или м.п. — поле не нужно">—</span>') + '</td>' +
       '<td>' + pm + '</td>' +
       '<td>' + pq + '</td>' +
       '<td><input type="text" class="r" data-cf="price" value="' + fmtN(own.price, 2) + '" placeholder="' + fmtN(inh('price'), 2) + '"></td>' +
@@ -1697,7 +1707,11 @@ $('mStatus').addEventListener('change', function () {
         if (k === 'pcs') cv = 'шт → шт';
         else if (k === 'm2') { var m2 = CJ.m2For(b.code, (node && node.name) || b.name, d, b.m2PerPiece); cv = m2 > 0 ? '1 шт = ' + fmtN(m2, 4) + ' м²' : 'не задана площадь плиты'; warn = !(m2 > 0); }
         else if (k === 'mp') { cv = d.lenM ? '1 шт = ' + fmtN(d.lenM, 2) + ' м.п.' : 'нет длины — без пересчёта'; warn = !d.lenM; }
-        else { cv = 'шт → ' + unit + ': без пересчёта'; warn = true; }
+        else {
+          var kpu = CJ.pcsFor(b.code, unit, (node && node.name) || b.name, b.pcsPerUnit);
+          if (kpu > 1) cv = fmtN(kpu, 3) + ' шт = 1 ' + unit;
+          else { cv = 'шт → ' + unit + ': задайте «шт в ед.» в номенклатуре'; warn = true; }
+        }
         cells = '<td class="nm1">' + esc((node && node.name) || b.name) + '<span class="code">' + esc(b.code) + '</span>' + (idx && !node ? '<div class="none">⚠ этого кода больше нет в выгрузке 1С</div>' : '') + '</td>' +
           '<td class="u">' + esc(unit) + '</td>' +
           '<td class="cv' + (warn ? ' warn' : '') + '">' + esc(cv) + '</td>' +
@@ -1768,7 +1782,7 @@ $('mStatus').addEventListener('change', function () {
       var it = e.target.closest('.rp-item'); if (!it || !rpRole) return;
       var code = it.getAttribute('data-code'), n = CJ.nomIndex().byId[code];
       var eff = CJ.catalogResolve(code, catWork);
-      rolesSet(rpRole, { code: code, name: n.name, unit: n.unit || '', m2PerPiece: eff.m2PerPiece || 0 });
+      rolesSet(rpRole, { code: code, name: n.name, unit: n.unit || '', m2PerPiece: eff.m2PerPiece || 0, pcsPerUnit: eff.pcsPerUnit || 0 });
       $('rolePickModal').classList.remove('open'); rpRole = null;
     });
     $('rpCancel').addEventListener('click', function () { $('rolePickModal').classList.remove('open'); rpRole = null; });
