@@ -95,6 +95,30 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 @keyframes tin{from{transform:translateX(-50%) translateY(-24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 .hintline{font-size:12px;color:#9aa1ac;margin-top:6px}
 @media(max-width:900px){.tablewrap{overflow-x:auto}table{min-width:820px}}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{padding:10px 20px;font-size:13.5px;font-weight:800;font-family:inherit;border-radius:9px;border:1px solid #e0e0e0;background:#fff;color:#5a6b7a;cursor:pointer}
+.tab:hover{color:#c00000;border-color:#c00000}
+.tab.active{background:#1a1a2e;border-color:#1a1a2e;color:#fff}
+.tab .cnt{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:rgba(127,127,127,.18);font-size:11px}
+.cat-table input,.cat-table select{width:100%;padding:6px 7px;border:1px solid transparent;border-radius:6px;font-size:12.5px;font-family:inherit;background:transparent;color:#1a1a2e}
+.cat-table input:hover,.cat-table select:hover{border-color:#e6e6e6}
+.cat-table input:focus,.cat-table select:focus{outline:none;border-color:#c00000;background:#fff}
+.cat-table input.r{text-align:right;font-variant-numeric:tabular-nums}
+.cat-table input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#c00000}
+.cat-table tbody tr{cursor:default}
+.cat-table tbody tr.off td{opacity:.45}
+.cat-table tbody tr.off td.keep{opacity:1}
+.cat-table td{padding:5px 6px}
+.cat-table td.c{text-align:center}
+.cat-table td.ro{color:#7a8a99;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:12.5px}
+.cat-group td{background:#fafbfc;font-size:10.5px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.7px;padding:9px 14px !important}
+.cat-dirty{display:none;font-size:12px;font-weight:700;color:#b26a00}
+.cat-dirty.show{display:inline}
+.cat-pack{display:flex;gap:4px;align-items:center}
+.cat-pack input.r{width:64px}
+.cat-pack select{width:58px}
+.cat-del{width:26px;height:26px;border-radius:6px;border:1px solid #f0c0c0;background:#fff;color:#c00000;cursor:pointer;font-size:11px;padding:0}
+.cat-help{font-size:12px;color:#7a8a99;line-height:1.6;margin-top:10px;padding:12px 14px;background:#fff;border:1px solid #ececec;border-radius:10px}
 </style>
 </head>
 <body>
@@ -108,6 +132,12 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     <div class="badge" id="modeBadge">Хранилище: локально</div>
   </header>
 
+  <nav class="tabs">
+    <button type="button" class="tab active" data-tab="journal">📒 Журнал</button>
+    <button type="button" class="tab" data-tab="catalog">📚 Справочник<span class="cnt" id="catCount">0</span></button>
+  </nav>
+
+<div id="tabJournal">
 <div class="toolbar">
     <button type="button" class="btn primary" id="btnNewInvoice">＋ Новый счёт</button>
     <button type="button" class="btn green" id="btnNewKp">🧮 Калькулятор Кубота</button>
@@ -182,6 +212,66 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   </section>
 </div>
 
+<!-- ===================== СПРАВОЧНИК ===================== -->
+<div id="tabCatalog" hidden>
+  <div class="toolbar">
+    <button type="button" class="btn primary" data-cat-add="plate">＋ Плита</button>
+    <button type="button" class="btn primary" data-cat-add="light">＋ Светильник</button>
+    <button type="button" class="btn" data-cat-add="profile">＋ Профиль</button>
+    <button type="button" class="btn" data-cat-add="other">＋ Прочее</button>
+    <span class="spacer"></span>
+    <span class="cat-dirty" id="catDirty">● Есть несохранённые изменения</span>
+    <button type="button" class="btn" id="btnCatReload">⟳ Обновить</button>
+    <button type="button" class="btn green" id="btnCatSave">💾 Сохранить справочник</button>
+  </div>
+  <section class="filters">
+    <input type="text" id="catSearch" placeholder="🔍 Поиск по названию или артикулу…" autocomplete="off">
+    <select id="catTypeFilter">
+      <option value="">Все позиции</option>
+      <option value="plate">Плиты</option>
+      <option value="light">Светильники</option>
+      <option value="profile">Профили</option>
+      <option value="other">Прочее</option>
+    </select>
+    <select id="catActiveFilter">
+      <option value="">Активные и скрытые</option>
+      <option value="1">Только активные</option>
+      <option value="0">Только скрытые</option>
+    </select>
+  </section>
+  <section class="tablewrap">
+    <table class="cat-table">
+      <thead>
+        <tr>
+          <th style="width:44px" title="Показывать в калькуляторах">Акт.</th>
+          <th style="width:44px" title="Позиция по умолчанию в калькуляторе">Осн.</th>
+          <th>Наименование</th>
+          <th style="width:110px">Артикул</th>
+          <th style="width:104px">Размер</th>
+          <th style="width:82px;text-align:right">м² в шт.</th>
+          <th style="width:74px">Ед.</th>
+          <th style="width:60px;text-align:center">Кратно пачке</th>
+          <th style="width:150px">В пачке</th>
+          <th style="width:94px;text-align:right">Цена без НДС</th>
+          <th style="width:150px">Примечание</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="catBody"></tbody>
+    </table>
+    <div class="empty" id="catEmpty" style="display:none"><b>📚</b>Ничего не найдено.</div>
+  </section>
+  <div class="cat-help">
+    <b>Как это работает.</b> Калькуляторы берут отсюда активные плиты и светильники.
+    «Осн.» — позиция, которая выбирается по умолчанию (одна на тип и размер).
+    Плиты считаются в м²: 600×600 = 0,36 м², 1200×600 = 0,72 м².
+    Если стоит «Кратно пачке», калькулятор округлит количество вверх до целых пачек
+    (в пачке можно указать штуки или м²). Цена подставляется в журнал, если в позиции счёта цена не указана.
+    <span id="catWhere"></span>
+  </div>
+</div>
+</div>
+
 <!-- ===================== КАРТОЧКА ЗАПИСИ ===================== -->
 <div class="modal" id="recModal">
   <div class="mi">
@@ -240,6 +330,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       <tbody id="rowsBody"></tbody>
     </table>
     <button type="button" class="addrow" id="btnAddRow">＋ Добавить позицию</button>
+    <datalist id="catNames"></datalist>
 
     <div class="tot">
       <div class="l">Без НДС:</div><div class="v" id="tSubtotal">0,00</div>
@@ -578,7 +669,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       var sum = qty * CJ.num(r.price);
       var withVat = sum * 1.2;
       return '<tr data-idx="' + i + '">' +
-        '<td><input type="text" data-f="label" value="' + esc(r.label) + '"></td>' +
+        '<td><input type="text" data-f="label" list="catNames" value="' + esc(r.label) + '"></td>' +
         '<td><input type="text" class="r" data-f="qtyCalc" value="' + String(CJ.num(r.qtyCalc)).replace('.', ',') + '"></td>' +
         '<td><input type="text" class="r" data-f="qtyReserve" value="' + String(CJ.num(r.qtyReserve)).replace('.', ',') + '"></td>' +
         '<td><input type="text" data-f="unit" value="' + esc(r.unit || 'шт.') + '"></td>' +
@@ -1100,6 +1191,15 @@ var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
       if (!row) return;
       if (f === 'label' || f === 'unit') row[f] = inp.value;
       else row[f] = parseNum(inp.value);
+      if (f === 'label') {
+        var ci = CJ.catalogFind && CJ.catalogFind(inp.value);
+        if (ci) {
+          var trc = inp.closest('tr');
+          if (!CJ.num(row.price) && ci.price) { row.price = ci.price; trc.querySelector('input[data-f="price"]').value = String(ci.price).replace('.', ','); }
+          if (ci.unit && (!row.unit || row.unit === 'шт.')) { row.unit = ci.unit; trc.querySelector('input[data-f="unit"]').value = ci.unit; }
+          trc.querySelector('.calc').textContent = money(CJ.rowQty(row) * CJ.num(row.price) * 1.2);
+        }
+      }
       if (f !== 'label' && f !== 'unit') {
         var tr = inp.closest('tr');
         var qty = CJ.rowQty(row);
@@ -1229,6 +1329,210 @@ $('mStatus').addEventListener('change', function () {
     });
   }
 
+  /* ============================================================
+     СПРАВОЧНИК
+     ============================================================ */
+  var catItems = [];
+  var catBase = '';
+  var catLoaded = false;
+
+  function catIsDirty() { return JSON.stringify(catItems) !== catBase; }
+  function catMarkDirty() { $('catDirty').classList.toggle('show', catIsDirty()); }
+  function catLoadFromCore() {
+    catItems = CJ.catalog();
+    catBase = JSON.stringify(catItems);
+    catLoaded = true;
+    catMarkDirty();
+    renderCatalog();
+    fillCatDatalist();
+  }
+  function fillCatDatalist() {
+    var list = CJ.catalogList ? CJ.catalogList() : [];
+    $('catNames').innerHTML = list.map(function (x) { return '<option value="' + esc(x.name) + '">'; }).join('');
+    $('catCount').textContent = CJ.catalog ? CJ.catalog().length : 0;
+  }
+  function fmtNum(v, d) {
+    var n = CJ.num(v, 0);
+    if (!n) return '';
+    return String(+n.toFixed(d == null ? 4 : d)).replace('.', ',');
+  }
+  function catRowHtml(x) {
+    var i = catItems.indexOf(x);
+    var hasSize = x.type === 'plate' || x.type === 'light';
+    var isPlate = x.type === 'plate';
+    var sizeSel = hasSize
+      ? '<select data-cf="size">' + CJ.CATALOG_SIZES.map(function (sz) {
+          return '<option value="' + sz + '"' + (x.size === sz ? ' selected' : '') + '>' + sz.replace('x', '×') + '</option>';
+        }).join('') + '</select>'
+      : '<span style="color:#c5cad1">—</span>';
+    var units = ['м²', 'шт.', 'пог. м', 'компл.'];
+    var unitSel = '<select data-cf="unit">' + units.map(function (u) {
+      return '<option' + (x.unit === u ? ' selected' : '') + '>' + u + '</option>';
+    }).join('') + '</select>';
+    var pack = '<div class="cat-pack"><input type="text" class="r" data-cf="packQty" value="' + fmtNum(x.packQty) + '" placeholder="—"' + (x.packMultiple ? '' : ' disabled') + '>' +
+      '<select data-cf="packUnit"' + (x.packMultiple ? '' : ' disabled') + '><option' + (x.packUnit === 'шт.' ? ' selected' : '') + '>шт.</option>' +
+      (isPlate ? '<option' + (x.packUnit === 'м²' ? ' selected' : '') + '>м²</option>' : '') + '</select></div>';
+    var packHint = '';
+    if (isPlate && x.packMultiple && x.packQty > 0) {
+      var m2pp = CJ.sizeM2(x.size);
+      packHint = x.packUnit === 'м²' ? ('≈ ' + Math.round(x.packQty / m2pp) + ' шт.') : ('= ' + fmtNum(x.packQty * m2pp, 2) + ' м²');
+      pack += '<div style="font-size:11px;color:#9aa1ac;margin-top:2px;padding-left:4px">' + packHint + '</div>';
+    }
+    return '<tr data-ci="' + i + '"' + (x.active ? '' : ' class="off"') + '>' +
+      '<td class="c keep"><input type="checkbox" data-cf="active"' + (x.active ? ' checked' : '') + '></td>' +
+      '<td class="c"><input type="checkbox" data-cf="isDefault"' + (x.isDefault ? ' checked' : '') + '></td>' +
+      '<td><input type="text" data-cf="name" value="' + esc(x.name) + '"></td>' +
+      '<td><input type="text" data-cf="article" value="' + esc(x.article) + '" placeholder="—"></td>' +
+      '<td>' + sizeSel + '</td>' +
+      '<td class="ro">' + (isPlate ? fmtNum(CJ.sizeM2(x.size), 2) : '') + '</td>' +
+      '<td>' + unitSel + '</td>' +
+      '<td class="c"><input type="checkbox" data-cf="packMultiple"' + (x.packMultiple ? ' checked' : '') + '></td>' +
+      '<td>' + pack + '</td>' +
+      '<td><input type="text" class="r" data-cf="price" value="' + fmtNum(x.price, 2) + '" placeholder="0"></td>' +
+      '<td><input type="text" data-cf="note" value="' + esc(x.note) + '" placeholder="—"></td>' +
+      '<td><button type="button" class="cat-del" data-cdel="' + i + '" title="Удалить позицию">✕</button></td>' +
+    '</tr>';
+  }
+  function renderCatalog() {
+    var q = $('catSearch').value.trim().toLowerCase();
+    var tf = $('catTypeFilter').value;
+    var af = $('catActiveFilter').value;
+    var html = '';
+    var shown = 0;
+    CJ.CATALOG_TYPES.forEach(function (t) {
+      if (tf && tf !== t.key) return;
+      var list = catItems.filter(function (x) {
+        if (x.type !== t.key) return false;
+        if (af === '1' && !x.active) return false;
+        if (af === '0' && x.active) return false;
+        if (q && (x.name + ' ' + x.article + ' ' + x.note).toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+      if (!list.length) return;
+      var title = { plate: 'Плиты', light: 'Светильники', profile: 'Профили', other: 'Прочее' }[t.key];
+      html += '<tr class="cat-group"><td colspan="12">' + title + ' · ' + list.length + '</td></tr>';
+      list.forEach(function (x) { html += catRowHtml(x); shown++; });
+    });
+    $('catBody').innerHTML = html;
+    $('catEmpty').style.display = shown ? 'none' : 'block';
+    $('catCount').textContent = catItems.length;
+    $('catWhere').textContent = CJ.isApi()
+      ? ' Справочник общий: хранится на сервере и одинаков у всех сотрудников.'
+      : ' Сейчас справочник хранится только в этом браузере — для общего справочника включите серверный режим в «Настройках».';
+  }
+  function catSetField(x, f, el) {
+    if (f === 'active' || f === 'isDefault' || f === 'packMultiple') {
+      x[f] = el.checked;
+      if (f === 'isDefault' && x.isDefault) {
+        catItems.forEach(function (o) { if (o !== x && o.type === x.type && o.size === x.size) o.isDefault = false; });
+      }
+      if (f === 'packMultiple' && x.packMultiple && x.type === 'plate' && !x.packQty) x.packUnit = 'шт.';
+      return true; // нужна перерисовка
+    }
+    if (f === 'packQty' || f === 'price') { x[f] = parseNum(el.value); return f === 'packQty'; }
+    if (f === 'size') { x.size = el.value; x.m2PerPiece = x.type === 'plate' ? CJ.sizeM2(x.size) : 0; return true; }
+    if (f === 'packUnit') { x.packUnit = el.value; return true; }
+    x[f] = el.value;
+    return false;
+  }
+  function catAdd(type) {
+    var names = { plate: 'Новая плита 600×600', light: 'Новый светильник 600×600', profile: 'Новый профиль', other: 'Новая позиция' };
+    var x = CJ.catalogNormalize({ type: type, name: names[type], active: true });
+    catItems.push(x);
+    $('catTypeFilter').value = '';
+    $('catSearch').value = '';
+    renderCatalog();
+    catMarkDirty();
+    var tr = $('catBody').querySelector('tr[data-ci="' + catItems.indexOf(x) + '"]');
+    if (tr) { var inp = tr.querySelector('input[data-cf="name"]'); inp.focus(); inp.select(); tr.scrollIntoView({ block: 'center' }); }
+  }
+  function catSave() {
+    // проверка: пустые названия и дубли
+    var seen = {};
+    for (var i = 0; i < catItems.length; i++) {
+      var nm = String(catItems[i].name || '').trim();
+      if (!nm) { notify('У позиции нет названия', true); return; }
+      var k = nm.toLowerCase();
+      if (seen[k]) { notify('Повторяется название: ' + nm, true); return; }
+      seen[k] = true;
+      if (catItems[i].packMultiple && !(CJ.num(catItems[i].packQty) > 0)) { notify('Укажите, сколько в пачке: ' + nm, true); return; }
+    }
+    var btn = $('btnCatSave');
+    btn.disabled = true;
+    CJ.catalogSave(catItems).then(function (r) {
+      catItems = CJ.catalog();
+      catBase = JSON.stringify(catItems);
+      catMarkDirty();
+      renderCatalog();
+      fillCatDatalist();
+      notify(r && r.local ? '✓ Справочник сохранён в этом браузере' : '✓ Справочник сохранён на сервере');
+    }).catch(function (e) {
+      catBase = JSON.stringify(CJ.catalog());
+      catMarkDirty();
+      notify('Сохранено локально, на сервер не ушло: ' + (e && e.message || e), true);
+    }).then(function () { btn.disabled = false; });
+  }
+  function catReload() {
+    if (catIsDirty() && !confirm('Несохранённые изменения справочника будут потеряны. Продолжить?')) return;
+    var p = CJ.isApi() ? CJ.catalogSync() : Promise.resolve();
+    p.then(function () { catLoadFromCore(); notify('Справочник обновлён'); })
+     .catch(function (e) { catLoadFromCore(); notify('Сервер недоступен: ' + (e && e.message || e), true); });
+  }
+  function showTab(name) {
+    if (name !== 'catalog' && catIsDirty() && catLoaded) {
+      if (!confirm('В справочнике есть несохранённые изменения. Сохранить?')) { catItems = JSON.parse(catBase); catMarkDirty(); }
+      else catSave();
+    }
+    document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === name); });
+    $('tabJournal').hidden = name !== 'journal';
+    $('tabCatalog').hidden = name !== 'catalog';
+    if (name === 'catalog') { if (!catLoaded) catLoadFromCore(); else renderCatalog(); }
+    try { history.replaceState(null, '', name === 'catalog' ? '#catalog' : location.pathname + location.search); } catch (e) {}
+  }
+  function bindCatalog() {
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); });
+    });
+    document.querySelectorAll('[data-cat-add]').forEach(function (b) {
+      b.addEventListener('click', function () { catAdd(b.getAttribute('data-cat-add')); });
+    });
+    $('btnCatSave').addEventListener('click', catSave);
+    $('btnCatReload').addEventListener('click', catReload);
+    ['catSearch', 'catTypeFilter', 'catActiveFilter'].forEach(function (id) {
+      $(id).addEventListener(id === 'catSearch' ? 'input' : 'change', renderCatalog);
+    });
+    function onEdit(e) {
+      var el = e.target.closest('[data-cf]');
+      if (!el) return;
+      var tr = el.closest('tr[data-ci]');
+      var x = catItems[parseInt(tr.getAttribute('data-ci'), 10)];
+      if (!x) return;
+      var redraw = catSetField(x, el.getAttribute('data-cf'), el);
+      if (redraw && e.type === 'change') {
+        renderCatalog();
+      }
+      catMarkDirty();
+    }
+    $('catBody').addEventListener('input', onEdit);
+    $('catBody').addEventListener('change', onEdit);
+    $('catBody').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-cdel]');
+      if (!b) return;
+      var x = catItems[parseInt(b.getAttribute('data-cdel'), 10)];
+      if (!x || !confirm('Удалить «' + x.name + '» из справочника?\nЕсли позиция может понадобиться позже — лучше снимите галочку «Акт.».')) return;
+      catItems.splice(catItems.indexOf(x), 1);
+      renderCatalog();
+      catMarkDirty();
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (catLoaded && catIsDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+    CJ.on('catalog-changed', function (e) {
+      if (e && e.external && !catIsDirty()) catLoadFromCore();
+      else fillCatDatalist();
+    });
+  }
+
   function boot() {
     fillStatusSelect();
     fillSettings();
@@ -1238,9 +1542,15 @@ $('mStatus').addEventListener('change', function () {
       return '<option value="' + s.key + '">' + esc(s.label) + '</option>';
     }).join('');
     bind();
+    bindCatalog();
     render();
+    fillCatDatalist();
 
-    if (CJ.isApi()) doSync(true);
+    if (CJ.isApi()) {
+      doSync(true);
+      if (CJ.catalogSync) CJ.catalogSync().then(function () { if (!catIsDirty()) { if (catLoaded) catLoadFromCore(); else fillCatDatalist(); } }).catch(function () {});
+    }
+    if (location.hash === '#catalog') showTab('catalog');
 
     var params = new URLSearchParams(location.search);
     if (params.get('id') && CJ.get(params.get('id'))) openRecord(params.get('id'));
