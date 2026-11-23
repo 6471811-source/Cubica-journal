@@ -1,5 +1,5 @@
 /* ============================================================
-   CUBICA · Ядро журнала (Универсальный адаптер v1.2)
+   CUBICA · Ядро журнала (Универсальный адаптер v1.3 + справочник)
    Подключается на: журнал, i5, калькуляторы
    ============================================================ */
 (function (global) {
@@ -418,7 +418,7 @@
     var finalRows = (rec.rows || []).map(function (r) {
       return { 
         label: r.label, 
-        qty: rowQty(r), // Всегда складываем qtyCalc + qtyReserve 
+        qty: (rec.type === 'cubica') ? rowQty(r) : num(r.qtyCalc), 
         unit: r.unit || 'шт.', 
         price: num(r.price) 
       };
@@ -571,12 +571,13 @@
   function exportJSON() {
     var s = loadSettings();
     delete s.apiToken;
-    return { version: 2, exported: nowISO(), settings: s, records: loadRecords() };
+    return { version: 2, exported: nowISO(), settings: s, records: loadRecords(), catalog: catalogAll() };
   }
   function importJSON(data, opts) {
     opts = opts || {};
     var incoming = Array.isArray(data) ? data : (data && data.records);
     if (!Array.isArray(incoming)) throw new Error('Неверный формат файла');
+    if (data && Array.isArray(data.catalog) && data.catalog.length) { catalogSave(data.catalog).catch(function () {}); }
     var before = loadRecords();
     var list = opts.replace ? [] : before.slice();
     var added = 0, updated = 0;
@@ -624,8 +625,130 @@
     return out;
   }
 
+  /* ============================================================
+     СПРАВОЧНИК (плиты, светильники, профили, прочее)
+     Локально: localStorage 'cubica_catalog_v1'
+     Сервер:   GET/PUT {apiBase}/catalog (воркер v2)
+     ============================================================ */
+  var K_CATALOG = 'cubica_catalog_v1';
+  var CATALOG_TYPES = [
+    { key: 'plate',   label: 'Плита' },
+    { key: 'light',   label: 'Светильник' },
+    { key: 'profile', label: 'Профиль' },
+    { key: 'other',   label: 'Прочее' }
+  ];
+  var CATALOG_SIZES = ['600x600', '1200x600'];
+  function sizeM2(size) {
+    var m = String(size || '').match(/(\d+)\s*[x×х]\s*(\d+)/i);
+    return m ? (Number(m[1]) * Number(m[2])) / 1e6 : 0;
+  }
+  function defaultCatalog() {
+    var t = nowISO();
+    var items = [
+      { type: 'plate',   name: 'Плита потолочная 600×600',  size: '600x600',  unit: 'м²', packMultiple: false, packQty: 0, packUnit: 'шт.' },
+      { type: 'plate',   name: 'Плита потолочная 1200×600', size: '1200x600', unit: 'м²', packMultiple: false, packQty: 0, packUnit: 'шт.' },
+      { type: 'light',   name: 'Светильник LED 600×600',    size: '600x600',  unit: 'шт.', power: 36 },
+      { type: 'profile', name: 'Т-профиль 24х33х3600', unit: 'шт.' },
+      { type: 'profile', name: 'Т-профиль 24х33х1200', unit: 'шт.' },
+      { type: 'profile', name: 'Т-профиль 24х33х600',  unit: 'шт.' },
+      { type: 'profile', name: 'Пристенный уголок 19х24х3000', unit: 'шт.' },
+      { type: 'other',   name: 'Подвес с крючком', unit: 'шт.' }
+    ];
+    return items.map(function (x, i) { return normalizeCatalogItem(Object.assign({ id: 'c' + (i + 1), active: true, isDefault: i <= 2 }, x)); });
+  }
+  function normalizeCatalogItem(x) {
+    x = x || {};
+    var type = ['plate', 'light', 'profile', 'other'].indexOf(x.type) >= 0 ? x.type : 'other';
+    var size = (type === 'plate' || type === 'light') ? (CATALOG_SIZES.indexOf(x.size) >= 0 ? x.size : '600x600') : '';
+    return {
+      id: x.id || uid('c'),
+      type: type,
+      name: String(x.name || '').trim() || 'Новая позиция',
+      article: String(x.article || ''),
+      size: size,
+      m2PerPiece: type === 'plate' ? sizeM2(size) : 0,
+      unit: x.unit || (type === 'plate' ? 'м²' : 'шт.'),
+      packMultiple: !!x.packMultiple,
+      packQty: num(x.packQty, 0),
+      packUnit: x.packUnit === 'м²' ? 'м²' : 'шт.',
+      power: num(x.power, 0),
+      price: num(x.price, 0),
+      active: x.active !== false,
+      isDefault: !!x.isDefault,
+      note: String(x.note || '')
+    };
+  }
+  function catalogMeta() {
+    try { var raw = localStorage.getItem(K_CATALOG); if (raw) return JSON.parse(raw); } catch (e) {}
+    return null;
+  }
+  function catalogAll() {
+    var m = catalogMeta();
+    if (m && Array.isArray(m.items)) return m.items.map(normalizeCatalogItem);
+    return defaultCatalog();
+  }
+  function catalogWriteLocal(items, meta) {
+    var data = { version: num(meta && meta.version, 0), updatedAt: (meta && meta.updatedAt) || nowISO(), items: items };
+    try { localStorage.setItem(K_CATALOG, JSON.stringify(data)); } catch (e) { emit('storage-error', {}); return false; }
+    emit('catalog-changed', { count: items.length });
+    return true;
+  }
+  function catalogSave(items) {
+    items = (items || []).map(normalizeCatalogItem);
+    var prev = catalogMeta() || {};
+    catalogWriteLocal(items, { version: prev.version, updatedAt: nowISO() });
+    if (!isApi()) return Promise.resolve({ ok: true, local: true });
+    return apiFetch('/catalog', { method: 'PUT', body: JSON.stringify({ items: items }) }).then(function (r) {
+      catalogWriteLocal(items, { version: r && r.version, updatedAt: r && r.updatedAt });
+      return r;
+    }).catch(function (e) { emit('sync-error', { catalog: true, error: e }); throw e; });
+  }
+  function catalogSync() {
+    if (!isApi()) return Promise.resolve(catalogAll());
+    return apiFetch('/catalog').then(function (data) {
+      var items = data && Array.isArray(data.items) ? data.items : [];
+      if (!items.length) {
+        // на сервере пусто — отправляем туда то, что есть локально
+        var local = catalogAll();
+        return catalogSave(local).then(function () { return local; });
+      }
+      items = items.map(normalizeCatalogItem);
+      catalogWriteLocal(items, data);
+      return items;
+    });
+  }
+  function catalogList(type, opts) {
+    opts = opts || {};
+    return catalogAll().filter(function (x) { return (!type || x.type === type) && (opts.all || x.active); });
+  }
+  function catalogFind(idOrName) {
+    var s = String(idOrName || '').trim().toLowerCase();
+    var list = catalogAll();
+    for (var i = 0; i < list.length; i++) if (list[i].id === idOrName || list[i].name.toLowerCase() === s) return list[i];
+    return null;
+  }
+  // Пересчёт количества плит с учётом пачек.
+  // pieces — сколько плит нужно по раскладке. Возвращает, сколько отгружать.
+  function catalogPackRound(item, pieces) {
+    item = normalizeCatalogItem(item);
+    pieces = Math.max(0, Math.ceil(num(pieces, 0)));
+    var m2pp = item.m2PerPiece || sizeM2(item.size);
+    var res = { pieces: pieces, m2: +(pieces * m2pp).toFixed(4), packs: 0, shipPieces: pieces, shipM2: +(pieces * m2pp).toFixed(4), m2PerPiece: m2pp, rounded: false };
+    if (item.packMultiple && item.packQty > 0) {
+      var perPackPieces = item.packUnit === 'м²' ? (m2pp > 0 ? Math.round(item.packQty / m2pp) : 0) : item.packQty;
+      if (perPackPieces > 0) {
+        res.packs = Math.ceil(pieces / perPackPieces);
+        res.shipPieces = res.packs * perPackPieces;
+        res.shipM2 = +(res.shipPieces * m2pp).toFixed(4);
+        res.rounded = res.shipPieces !== pieces;
+        res.perPackPieces = perPackPieces;
+      }
+    }
+    return res;
+  }
+
   var CJ = {
-    version: '1.2.0',
+    version: '1.3.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -646,12 +769,17 @@
     statusInfo: statusInfo, money: money,
     b64enc: b64enc, b64dec: b64dec,
     uid: uid, num: num, clone: clone, nowISO: nowISO,
-    on: on
+    on: on,
+    CATALOG_TYPES: CATALOG_TYPES, CATALOG_SIZES: CATALOG_SIZES,
+    catalog: catalogAll, catalogList: catalogList, catalogFind: catalogFind,
+    catalogSave: catalogSave, catalogSync: catalogSync, catalogDefaults: defaultCatalog,
+    catalogNormalize: normalizeCatalogItem, catalogPackRound: catalogPackRound, sizeM2: sizeM2
   };
 
   global.addEventListener('storage', function (e) {
     if (e.key === K_RECORDS) emit('records-changed', { external: true });
     if (e.key === K_SETTINGS) emit('settings-changed', {});
+    if (e.key === K_CATALOG) emit('catalog-changed', { external: true });
   });
 
   global.CubicaJournal = CJ;
