@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CUBICA · Рабочий журнал</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#f4f5f7;color:#1a1a2e;line-height:1.5;padding:20px 18px 60px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1440px;margin:0 auto}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;background:#fff;border:1px solid #e6e6e6;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.04);margin-bottom:14px}
+.brand{font-size:19px;font-weight:900;color:#c00000;letter-spacing:.5px;display:flex;align-items:baseline;gap:10px}
+.brand span{font-size:13px;font-weight:600;color:#7a8a99;letter-spacing:1.6px;text-transform:uppercase}
+.mgr{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:#7a8a99;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.mgr input{padding:8px 12px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1a2e;width:180px}
+.mgr input:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.badge{font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;background:#eef2f7;color:#5a6b7a;text-transform:uppercase;letter-spacing:.6px;cursor:help}
+.badge.api{background:#e8f5e9;color:#2e7d32}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.btn{padding:11px 18px;font-size:13px;font-weight:700;font-family:inherit;border-radius:9px;border:1px solid #ddd;background:#fff;color:#333;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:#c00000;color:#c00000;background:#fff5f5;transform:translateY(-1px)}
+.btn.primary{background:#c00000;color:#fff;border-color:#c00000;box-shadow:0 6px 18px rgba(192,0,0,.25)}
+.btn.primary:hover{background:#a50003;color:#fff;box-shadow:0 8px 24px rgba(192,0,0,.35)}
+.btn.green{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.btn.green:hover{background:#245f28;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.spacer{flex:1 1 auto}
+.warn{display:none;padding:12px 16px;border-radius:10px;background:#fff8e5;border:1px solid #f0d896;color:#8a5800;font-size:13px;margin-bottom:14px;line-height:1.6}
+.warn.show{display:block}
+.warn b{color:#b26a00}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#fff;border:1px solid #e6e6e6;border-radius:10px;padding:14px 16px}
+.stat .lb{font-size:10.5px;font-weight:800;color:#9aa1ac;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.stat .vl{font-size:21px;font-weight:800;color:#1a1a2e;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .vl.red{color:#c00000}
+.stat .vl.green{color:#2e7d32}
+.stat .vl small{font-size:12px;color:#9aa1ac;font-weight:600;margin-left:3px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters input[type=text]{flex:1 1 280px;padding:10px 14px;border:1px solid #ccc;border-radius:9px;font-size:13.5px;font-family:inherit}
+.filters input[type=text]:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.filters select{padding:10px 12px;border:1px solid #ccc;border-radius:9px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer}
+.filters select:focus{outline:none;border-color:#c00000}
+.tablewrap{background:#fff;border:1px solid #e6e6e6;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#fafbfc;text-align:left;padding:11px 14px;font-size:10.5px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid #ececec;white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid #f2f2f2;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fcfafa}
+tbody tr{cursor:pointer}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+td.numb{font-weight:800;color:#c00000;white-space:nowrap}
+td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
+.pill{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap}
+.acts{display:flex;gap:4px;justify-content:flex-end}
+.acts button{width:30px;height:30px;border-radius:7px;border:1px solid #e6e6e6;background:#fff;cursor:pointer;font-size:13px;line-height:1;padding:0;transition:all .15s}
+.acts button:hover{border-color:#c00000;background:#fff5f5}
+.empty{padding:60px 20px;text-align:center;color:#9aa1ac;font-size:14px}
+.empty b{display:block;font-size:36px;margin-bottom:12px;opacity:.5}
+.modal{position:fixed;inset:0;background:rgba(15,15,25,.7);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.modal.open{display:flex}
+.mi{background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.35);width:100%;max-width:880px;padding:24px 26px 20px;margin:auto}
+.mi h3{font-size:18px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mi .sub{font-size:12px;color:#9aa1ac;margin-bottom:16px}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 16px;margin-bottom:14px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld.full{grid-column:1/-1}
+.fld label{font-size:10px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.6px}
+.fld input,.fld select,.fld textarea{padding:9px 11px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1a2e;background:#fff;width:100%}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:#c00000;box-shadow:0 0 0 3px rgba(192,0,0,.1)}
+.sect{margin:18px 0 10px;padding-top:14px;border-top:1px solid #ececec;font-size:11px;font-weight:800;color:#9aa1ac;text-transform:uppercase;letter-spacing:.8px}
+.rows{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.rows th{background:#fafbfc;padding:7px 6px;font-size:9.5px;color:#7a8a99;text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:1px solid #ececec;font-weight:800}
+.rows td{padding:3px 4px;border-bottom:1px solid #f4f4f4}
+.rows input{width:100%;padding:6px 7px;border:1px solid transparent;border-radius:6px;font-size:12.5px;font-family:inherit;background:transparent}
+.rows input:hover{border-color:#e6e6e6}
+.rows input:focus{outline:none;border-color:#c00000;background:#fff}
+.rows input.r{text-align:right;font-variant-numeric:tabular-nums}
+.rows td.calc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;padding-right:8px;white-space:nowrap}
+.rows .del{width:26px;height:26px;border-radius:6px;border:1px solid #f0c0c0;background:#fff;color:#c00000;cursor:pointer;font-size:11px;padding:0}
+.addrow{margin-top:8px;padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;border-radius:8px;border:1px dashed #c00000;background:#fff;color:#c00000;cursor:pointer}
+.addrow:hover{background:#fff5f5}
+.tot{display:grid;grid-template-columns:1fr auto;gap:5px 18px;max-width:340px;margin:14px 0 0 auto;font-size:13px}
+.tot .l{color:#7a8a99}
+.tot .v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tot .g{font-size:16px;color:#c00000;border-top:1px solid #f0c0c0;padding-top:8px;margin-top:4px}
+.cmt{padding:10px 12px;background:#fafbfc;border:1px solid #ececec;border-radius:8px;font-size:12.5px;margin-bottom:6px}
+.cmt .h{font-size:10.5px;color:#9aa1ac;margin-bottom:3px;font-weight:700}
+.mbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid #ececec}
+.mbar .grp{display:flex;gap:10px;flex-wrap:wrap}
+.link{display:flex;gap:8px;align-items:center;margin-top:8px}
+.link input{flex:1;padding:9px 12px;border:1px solid #ccc;border-radius:8px;font-size:12px;font-family:Consolas,monospace;background:#fafafa}
+.toast{position:fixed;left:50%;top:22px;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:13px 24px;border-radius:10px;font-weight:700;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:3000;display:none}
+.toast.show{display:block;animation:tin .25s ease-out}
+.toast.err{background:#c00000}
+@keyframes tin{from{transform:translateX(-50%) translateY(-24px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.hintline{font-size:12px;color:#9aa1ac;margin-top:6px}
+@media(max-width:900px){.tablewrap{overflow-x:auto}table{min-width:820px}}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{padding:10px 20px;font-size:13.5px;font-weight:800;font-family:inherit;border-radius:9px;border:1px solid #e0e0e0;background:#fff;color:#5a6b7a;cursor:pointer}
+.tab:hover{color:#c00000;border-color:#c00000}
+.tab.active{background:#1a1a2e;border-color:#1a1a2e;color:#fff}
+.tab .cnt{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:10px;background:rgba(127,127,127,.18);font-size:11px}
+.cat-table input,.cat-table select{width:100%;padding:6px 7px;border:1px solid transparent;border-radius:6px;font-size:12.5px;font-family:inherit;background:transparent;color:#1a1a2e}
+.cat-table input:hover,.cat-table select:hover{border-color:#e6e6e6}
+.cat-table input:focus,.cat-table select:focus{outline:none;border-color:#c00000;background:#fff}
+.cat-table input.r{text-align:right;font-variant-numeric:tabular-nums}
+.cat-table input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#c00000}
+.cat-table tbody tr{cursor:default}
+.cat-table tbody tr.off td{opacity:.45}
+.cat-table tbody tr.off td.keep{opacity:1}
+.cat-table td{padding:5px 6px}
+.cat-table td.c{text-align:center}
+.cat-table td.ro{color:#7a8a99;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;font-size:12.5px}
+.cat-group td{background:#fafbfc;font-size:10.5px;font-weight:800;color:#7a8a99;text-transform:uppercase;letter-spacing:.7px;padding:9px 14px !important}
+.cat-dirty{display:none;font-size:12px;font-weight:700;color:#b26a00}
+.cat-dirty.show{display:inline}
+.cat-pack{display:flex;gap:4px;align-items:center}
+.cat-pack input.r{width:64px}
+.cat-pack select{width:58px}
+.cat-del{width:26px;height:26px;border-radius:6px;border:1px solid #f0c0c0;background:#fff;color:#c00000;cursor:pointer;font-size:11px;padding:0}
+.cat-help{font-size:12px;color:#7a8a99;line-height:1.6;margin-top:10px;padding:12px 14px;background:#fff;border:1px solid #ececec;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">CUBICA<span>Рабочий журнал</span></div>
+    <div class="mgr">Менеджер
+      <input type="text" id="mgrInput" placeholder="Имя менеджера" autocomplete="off">
+    </div>
+    <div class="badge" id="modeBadge">Хранилище: локально</div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab active" data-tab="journal">📒 Журнал</button>
+    <button type="button" class="tab" data-tab="catalog">📚 Справочник<span class="cnt" id="catCount">0</span></button>
+  </nav>
+
+<div id="tabJournal">
+<div class="toolbar">
+    <button type="button" class="btn primary" id="btnNewInvoice">＋ Новый счёт</button>
+    <button type="button" class="btn green" id="btnNewKp">🧮 Калькулятор Кубота</button>
+    <button type="button" class="btn green" id="btnNewArmstrong">🧱 Калькулятор Армстронга</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="btnExport">⬇ Экспорт JSON</button>
+    <button type="button" class="btn" id="btnImport">⬆ Импорт JSON</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+    <button type="button" class="btn" id="btnSync" style="display:none">⟳ Синхронизировать</button>
+    <button type="button" class="btn" id="btnSelfCheck">🩺 Проверить журнал</button>
+    <button type="button" class="btn" id="btnSettings">⚙ Настройки</button>
+  </div>
+    <div class="warn" id="localWarn">
+    <b>Локальный режим.</b> Журнал хранится в этом браузере (localStorage домена <code>6471811-source.github.io</code>).
+    Номера выдаются этим браузером: если с журналом работают несколько менеджеров или несколько компьютеров,
+    порядковые номера могут совпасть, и каждый увидит только свои записи.
+    Для общего журнала включите серверный режим в «Настройках».
+  </div>
+
+  <div class="warn" id="backupWarn">
+    <b>Резервная копия.</b> <span id="backupText"></span>
+    <button type="button" class="btn" id="btnBackupNow" style="margin-left:10px">⬇ Скачать копию</button>
+  </div>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="filters">
+    <input type="text" id="search" placeholder="🔍 Поиск: номер, контрагент, УНП, комментарий…" autocomplete="off">
+    <select id="statusFilter"></select>
+    <select id="seriesFilter">
+      <option value="">Все типы</option>
+      <option value="invoice">Счета</option>
+      <option value="kp">КП</option>
+    </select>
+    <select id="periodFilter">
+      <option value="">Всё время</option>
+      <option value="today">Сегодня</option>
+      <option value="week">Последние 7 дней</option>
+      <option value="month">Этот месяц</option>
+      <option value="prev-month">Прошлый месяц</option>
+      <option value="year">Этот год</option>
+    </select>
+    <select id="sortFilter">
+      <option value="date-desc">Сначала новые</option>
+      <option value="date-asc">Сначала старые</option>
+      <option value="sum-desc">По сумме ↓</option>
+      <option value="sum-asc">По сумме ↑</option>
+      <option value="number-desc">По номеру ↓</option>
+    </select>
+  </section>
+
+  <section class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px">Номер</th>
+          <th style="width:92px">Дата</th>
+          <th>Контрагент</th>
+          <th style="width:150px;text-align:right">Сумма с НДС</th>
+          <th style="width:140px">Статус</th>
+          <th style="width:120px">Менеджер</th>
+          <th style="width:150px"></th>
+        </tr>
+      </thead>
+      <tbody id="recsBody"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none">
+      <b>📒</b>
+      Журнал пуст.<br>
+      Нажмите «＋ Новый счёт» или «🧮 Калькулятор Кубота», чтобы создать первую запись.
+    </div>
+  </section>
+</div>
+
+<!-- ===================== СПРАВОЧНИК ===================== -->
+<div id="tabCatalog" hidden>
+  <div class="toolbar">
+    <button type="button" class="btn primary" data-cat-add="plate">＋ Плита</button>
+    <button type="button" class="btn primary" data-cat-add="light">＋ Светильник</button>
+    <button type="button" class="btn" data-cat-add="profile">＋ Профиль</button>
+    <button type="button" class="btn" data-cat-add="other">＋ Прочее</button>
+    <span class="spacer"></span>
+    <span class="cat-dirty" id="catDirty">● Есть несохранённые изменения</span>
+    <button type="button" class="btn" id="btnCatReload">⟳ Обновить</button>
+    <button type="button" class="btn green" id="btnCatSave">💾 Сохранить справочник</button>
+  </div>
+  <section class="filters">
+    <input type="text" id="catSearch" placeholder="🔍 Поиск по названию или артикулу…" autocomplete="off">
+    <select id="catTypeFilter">
+      <option value="">Все позиции</option>
+      <option value="plate">Плиты</option>
+      <option value="light">Светильники</option>
+      <option value="profile">Профили</option>
+      <option value="other">Прочее</option>
+    </select>
+    <select id="catActiveFilter">
+      <option value="">Активные и скрытые</option>
+      <option value="1">Только активные</option>
+      <option value="0">Только скрытые</option>
+    </select>
+  </section>
+  <section class="tablewrap">
+    <table class="cat-table">
+      <thead>
+        <tr>
+          <th style="width:44px" title="Показывать в калькуляторах">Акт.</th>
+          <th style="width:44px" title="Позиция по умолчанию в калькуляторе">Осн.</th>
+          <th>Наименование</th>
+          <th style="width:110px">Артикул</th>
+          <th style="width:104px">Размер</th>
+          <th style="width:82px;text-align:right">м² в шт.</th>
+          <th style="width:74px">Ед.</th>
+          <th style="width:60px;text-align:center">Кратно пачке</th>
+          <th style="width:150px">В пачке</th>
+          <th style="width:94px;text-align:right">Цена без НДС</th>
+          <th style="width:150px">Примечание</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="catBody"></tbody>
+    </table>
+    <div class="empty" id="catEmpty" style="display:none"><b>📚</b>Ничего не найдено.</div>
+  </section>
+  <div class="cat-help">
+    <b>Как это работает.</b> Калькуляторы берут отсюда активные плиты и светильники.
+    «Осн.» — позиция, которая выбирается по умолчанию (одна на тип и размер).
+    Плиты считаются в м²: 600×600 = 0,36 м², 1200×600 = 0,72 м².
+    Если стоит «Кратно пачке», калькулятор округлит количество вверх до целых пачек
+    (в пачке можно указать штуки или м²). Цена подставляется в журнал, если в позиции счёта цена не указана.
+    <span id="catWhere"></span>
+  </div>
+</div>
+</div>
+
+<!-- ===================== КАРТОЧКА ЗАПИСИ ===================== -->
+<div class="modal" id="recModal">
+  <div class="mi">
+    <h3>
+      <span id="mTitle">Запись</span>
+      <select id="mStatus" style="padding:7px 12px;border-radius:8px;border:1px solid #ccc;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer"></select>
+    </h3>
+    <div class="sub" id="mSub"></div>
+
+    <div class="mrow">
+      <div class="fld"><label for="mNumber">Номер</label><input type="text" id="mNumber"></div>
+      <div class="fld"><label for="mCreated">Создано</label><input type="text" id="mCreated" readonly></div>
+      <div class="fld"><label for="mUpdated">Изменено</label><input type="text" id="mUpdated" readonly></div>
+      <div class="fld"><label for="mManager">Менеджер</label><input type="text" id="mManager"></div>
+    </div>
+
+    <div class="sect">Контрагент</div>
+    <div class="mrow">
+      <div class="fld full"><label for="cName">Наименование</label><input type="text" id="cName" placeholder="ООО «Пример»"></div>
+      <div class="fld full"><label for="cFull">Полное наименование</label><input type="text" id="cFull"></div>
+      <div class="fld"><label for="cUnp">УНП</label><input type="text" id="cUnp" maxlength="9" inputmode="numeric"></div>
+      <div class="fld"><label for="cAccount">Расчётный счёт</label><input type="text" id="cAccount"></div>
+      <div class="fld full"><label for="cAddr">Юридический адрес</label><input type="text" id="cAddr"></div>
+      <div class="fld"><label for="cBank">Банк</label><input type="text" id="cBank"></div>
+      <div class="fld"><label for="cBic">БИК</label><input type="text" id="cBic" maxlength="7"></div>
+      <div class="fld"><label for="cPosition">Должность подписанта</label><input type="text" id="cPosition"></div>
+      <div class="fld"><label for="cFio">ФИО подписанта</label><input type="text" id="cFio"></div>
+      <div class="fld"><label for="cBasis">Основание</label><input type="text" id="cBasis"></div>
+      <div class="fld"><label for="cPhone">Телефон</label><input type="text" id="cPhone"></div>
+      <div class="fld"><label for="cEmail">E-mail</label><input type="text" id="cEmail"></div>
+    </div>
+
+    <div class="sect">Условия сделки</div>
+    <div class="mrow">
+      <div class="fld"><label for="dDelivery">Поставка</label>
+        <select id="dDelivery"><option value="pickup">Самовывоз</option><option value="delivery">Доставка</option></select>
+      </div>
+      <div class="fld"><label for="dPayment">Предоплата, %</label><input type="number" id="dPayment" min="0" max="100" step="5"></div>
+      <div class="fld"><label for="dDays">Срок поставки, дней</label><input type="number" id="dDays" min="0" max="60"></div>
+      <div class="fld full"><label for="dAddress">Адрес доставки</label><input type="text" id="dAddress"></div>
+    </div>
+
+    <div class="sect">Позиции</div>
+    <table class="rows">
+      <thead>
+        <tr>
+          <th>Наименование</th>
+          <th style="width:82px;text-align:right">Расчёт</th>
+          <th style="width:82px;text-align:right">Запас</th>
+          <th style="width:64px">Ед.</th>
+          <th style="width:96px;text-align:right">Цена</th>
+          <th style="width:110px;text-align:right">Сумма с НДС</th>
+          <th style="width:32px"></th>
+        </tr>
+      </thead>
+      <tbody id="rowsBody"></tbody>
+    </table>
+    <button type="button" class="addrow" id="btnAddRow">＋ Добавить позицию</button>
+    <datalist id="catNames"></datalist>
+
+    <div class="tot">
+      <div class="l">Без НДС:</div><div class="v" id="tSubtotal">0,00</div>
+      <div class="l">НДС:</div><div class="v" id="tVat">0,00</div>
+      <div class="l g">Итого с НДС:</div><div class="v g" id="tTotal">0,00</div>
+    </div>
+
+    <div class="sect">Комментарии</div>
+    <div id="commentsList"></div>
+    <div class="mrow" style="margin-top:8px">
+      <div class="fld full"><input type="text" id="newComment" placeholder="Написать комментарий и нажать Enter…"></div>
+    </div>
+    <div class="fld full" style="margin-top:10px">
+      <label for="mComment">Комментарий к записи (виден в журнале)</label>
+      <textarea id="mComment" rows="2" placeholder="Например: клиент просил пересчитать с монтажом"></textarea>
+    </div>
+
+    <div class="sect">История</div>
+    <div id="historyList"></div>
+
+    <div class="link" id="clientLinkWrap" style="display:none">
+      <input type="text" id="clientUrl" readonly onclick="this.select()">
+      <button type="button" class="btn" id="btnCopyUrl">📋</button>
+      <a class="btn" id="btnOpenUrl" target="_blank" rel="noopener">↗</a>
+    </div>
+
+    <div class="mbar">
+      <div class="grp">
+        <button type="button" class="btn" id="btnOpenCalc">🧮 Открыть в калькуляторе</button>
+        <button type="button" class="btn" id="btnOpenI5">📄 Открыть в счёте (i5)</button>
+        <button type="button" class="btn green" id="btnKpLink">🔗 Ссылка для клиента</button>
+        <button type="button" class="btn" id="btnDup">📋 Копировать</button>
+      </div>
+      <div class="grp">
+        <button type="button" class="btn" id="btnDel" style="color:#c00000;border-color:#f0c0c0">✕ Удалить</button>
+        <button type="button" class="btn" id="btnClose">Закрыть</button>
+        <button type="button" class="btn primary" id="btnSaveClose">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== НАСТРОЙКИ ===================== -->
+<div class="modal" id="setModal">
+  <div class="mi" style="max-width:680px">
+    <h3>⚙ Настройки журнала</h3>
+    <div class="sub">Эти параметры хранятся в браузере и применяются на всех страницах, подключивших journal-core.js</div>
+
+    <div class="mrow">
+      <div class="fld"><label for="sManager">Менеджер по умолчанию</label><input type="text" id="sManager"></div>
+      <div class="fld"><label for="sVat">Ставка НДС, %</label><input type="number" id="sVat" min="0" max="30" step="1"></div>
+      <div class="fld"><label for="sYearReset">Сброс нумерации каждый год</label>
+        <select id="sYearReset"><option value="1">Да</option><option value="0">Нет</option></select>
+      </div>
+      <div class="fld"><label for="sMode">Режим хранилища</label>
+        <select id="sMode"><option value="local">Локально (localStorage)</option><option value="api">Сервер (Cloudflare Worker)</option></select>
+      </div>
+    </div>
+
+    <div class="sect">Формат номеров</div>
+    <div class="mrow">
+      <div class="fld"><label for="sFmtInvoice">Счета</label><input type="text" id="sFmtInvoice"></div>
+      <div class="fld"><label for="sFmtKp">Коммерческие предложения</label><input type="text" id="sFmtKp"></div>
+    </div>
+    <div class="hintline">Подстановки: <code>{YYYY}</code> — год, <code>{NNNN}</code> — порядковый номер (4 цифры). Пример: <code>СЧ-{YYYY}-{NNNN}</code> → СЧ-2026-0001</div>
+
+    <div class="sect">Адреса страниц</div>
+    <div class="mrow">
+      <div class="fld full"><label for="sUrlCalc">Калькулятор Кубота (k6.3)</label><input type="text" id="sUrlCalc"></div>
+      <div class="fld full"><label for="sUrlI5">Счёт-договор (i5)</label><input type="text" id="sUrlI5"></div>
+      <div class="fld full"><label for="sUrlKp">Клиентское КП (kp)</label><input type="text" id="sUrlKp"></div>
+      <div class="fld full"><label for="sApiBase">Адрес сервиса (Worker)</label><input type="text" id="sApiBase"></div>
+      <div class="fld full"><label for="sApiToken">Токен журнала</label><input type="text" id="sApiToken" placeholder="оставьте пустым, если токен на сервере не задан"></div>
+    </div>
+
+    <div class="mbar">
+      <div class="grp"><button type="button" class="btn" id="btnResetSettings">↺ По умолчанию</button></div>
+      <div class="grp">
+        <button type="button" class="btn" id="btnSetClose">Закрыть</button>
+        <button type="button" class="btn primary" id="btnSetSave">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://6471811-source.github.io/Cubica-journal/journal-core.js"></script>
+<script>
+/* ============================================================
+   CUBICA · Журнал — логика страницы
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var CJ = window.CubicaJournal;
+  if (!CJ) { alert('Не загрузился journal-core.js'); return; }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var cur = null;
+  var curBase = '';
+  var toastTimer = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function parseNum(v) {
+    var n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+  function money(v) { return CJ.money(v); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return fmtDate(iso) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  function notify(msg, isErr) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function statusPill(key) {
+    var s = CJ.statusInfo(key);
+    return '<span class="pill" style="background:' + s.color + '">' + esc(s.label) + '</span>';
+  }
+  function recTotal(r) {
+    if (r.totals && typeof r.totals.total === 'number' && r.totals.total) return r.totals.total;
+    return CJ.computeTotals(r.rows).total;
+  }
+  function matchesSearch(r, q) {
+    if (!q) return true;
+    var hay = [
+      r.number, r.createdBy, r.comment,
+      r.contractor && r.contractor.name,
+      r.contractor && r.contractor.full,
+      r.contractor && r.contractor.unp
+    ]
+      .concat((r.rows || []).map(function (x) { return x.label; }))
+      .concat((r.rooms || []).map(function (x) { return x.name; }))
+      .concat((r.comments || []).map(function (c) { return c.text; }))
+      .join(' ').toLowerCase();
+    return hay.indexOf(q) >= 0;
+  }
+  function inPeriod(iso, period) {
+    if (!period) return true;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return false;
+    var now = new Date();
+    if (period === 'today') {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    if (period === 'week') return d.getTime() >= now.getTime() - 7 * 86400000;
+    if (period === 'month') return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    if (period === 'prev-month') {
+      var pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return d.getFullYear() === pm.getFullYear() && d.getMonth() === pm.getMonth();
+    }
+    if (period === 'year') return d.getFullYear() === now.getFullYear();
+    return true;
+  }
+
+  function renderStats() {
+    var s = CJ.summary();
+    var el = $('stats');
+    el.innerHTML =
+      '<div class="stat"><div class="lb">Записей</div><div class="vl">' + s.total + '</div></div>' +
+      '<div class="stat"><div class="lb">Сумма всего</div><div class="vl red">' + money(s.sum) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">Оплачено</div><div class="vl green">' + money(s.sumPaid) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">За этот месяц</div><div class="vl">' + money(s.sumMonth) + '<small>BYN</small></div></div>' +
+      '<div class="stat"><div class="lb">Отправлено КП</div><div class="vl">' + (s.byStatus.sent || 0) + '</div></div>' +
+      '<div class="stat"><div class="lb">Выставлено счетов</div><div class="vl">' + (s.byStatus.invoiced || 0) + '</div></div>';
+  }
+
+  function filteredSorted() {
+    var q = $('search').value.trim().toLowerCase();
+    var st = $('statusFilter').value;
+    var ser = $('seriesFilter').value;
+    var period = $('periodFilter').value;
+    var sort = $('sortFilter').value;
+
+    var list = CJ.all().filter(function (r) {
+      if (st && r.status !== st) return false;
+      if (ser && r.series !== ser) return false;
+      if (!inPeriod(r.createdAt, period)) return false;
+      return matchesSearch(r, q);
+    });
+
+    list.sort(function (a, b) {
+      switch (sort) {
+        case 'date-asc': return String(a.createdAt).localeCompare(String(b.createdAt));
+        case 'sum-desc': return recTotal(b) - recTotal(a);
+        case 'sum-asc': return recTotal(a) - recTotal(b);
+        case 'number-desc': return CJ.parseSeq(b.number) - CJ.parseSeq(a.number);
+        default: return String(b.createdAt).localeCompare(String(a.createdAt));
+      }
+    });
+    return list;
+  }
+
+  function renderTable() {
+    var list = filteredSorted();
+    var body = $('recsBody');
+    var empty = $('emptyState');
+
+    if (!list.length) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      empty.innerHTML = CJ.all().length
+        ? '<b>🔍</b>Ничего не найдено по текущему фильтру.'
+        : '<b>📒</b>Журнал пуст.<br>Нажмите «＋ Новый счёт» или «🧮 Калькулятор Кубота», чтобы создать первую запись.';
+      return;
+    }
+    empty.style.display = 'none';
+
+    body.innerHTML = list.map(function (r) {
+      var c = r.contractor || {};
+      var name = c.name ? esc(c.name)
+               : (c.full ? esc(c.full)
+               : '<span style="color:#c0c8d2">контрагент не указан</span>');
+      var cmt = r.comment ? '<div class="muted" style="font-weight:400;font-size:11.5px;color:#b0b8c2">' + esc(r.comment) + '</div>' : '';
+      var typeTag = r.series === 'kp' ? ' <span style="font-size:10px;color:#9aa1ac;font-weight:800">КП</span>' : '';
+      return '<tr data-id="' + esc(r.id) + '">' +
+        '<td class="numb">' + esc(r.number || '—') + typeTag + '</td>' +
+        '<td class="muted">' + fmtDate(r.createdAt) + '</td>' +
+        '<td>' + name + cmt + '</td>' +
+        '<td class="num">' + money(recTotal(r)) + '</td>' +
+        '<td>' + statusPill(r.status) + '</td>' +
+        '<td class="muted">' + esc(r.createdBy || '—') + '</td>' +
+        '<td><div class="acts">' +
+          '<button type="button" data-act="open" title="Открыть карточку">📂</button>' +
+          '<button type="button" data-act="calc" title="Открыть в калькуляторе">🧮</button>' +
+          '<button type="button" data-act="i5" title="Открыть в счёте (i5)">📄</button>' +
+          '<button type="button" data-act="dup" title="Копировать запись">📋</button>' +
+          '<button type="button" data-act="del" title="Удалить">✕</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function render() {
+    renderStats();
+    renderTable();
+    updateBackupWarn();
+  }
+
+  function fillStatusSelect() {
+    $('mStatus').innerHTML = CJ.STATUSES.map(function (s) {
+      return '<option value="' + s.key + '">' + esc(s.label) + '</option>';
+    }).join('');
+  }
+
+  var C_FIELDS = ['name', 'full', 'unp', 'addr', 'account', 'bank', 'bic', 'position', 'fio', 'basis', 'phone', 'email'];
+
+  function openRecord(id) {
+    var rec = CJ.get(id);
+    if (!rec) { notify('Запись не найдена', true); return; }
+    cur = JSON.parse(JSON.stringify(rec));
+
+    $('mTitle').textContent = (cur.series === 'kp' ? 'КП ' : 'Счёт ') + (cur.number || '—');
+    $('mSub').textContent = 'Создано ' + fmtDateTime(cur.createdAt) + ' · изменено ' + fmtDateTime(cur.updatedAt) +
+      (cur.rooms && cur.rooms.length ? ' · помещений: ' + cur.rooms.length : '');
+    $('mStatus').value = cur.status;
+    $('mNumber').value = cur.number || '';
+    $('mCreated').value = fmtDateTime(cur.createdAt);
+    $('mUpdated').value = fmtDateTime(cur.updatedAt);
+    $('mManager').value = cur.createdBy || '';
+
+    C_FIELDS.forEach(function (f) { $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value = (cur.contractor && cur.contractor[f]) || ''; });
+
+    $('dDelivery').value = (cur.deal && cur.deal.delivery) || 'pickup';
+    $('dPayment').value = cur.deal ? cur.deal.payment : 100;
+    $('dDays').value = cur.deal ? cur.deal.days : 3;
+    $('dAddress').value = (cur.deal && cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+
+    $('mComment').value = cur.comment || '';
+
+    renderRows();
+    renderComments();
+    renderClientLink();
+    showOpens(cur.id);
+    renderHistory();
+
+    collect();
+    curBase = comparable(cur);
+
+    $('recModal').classList.add('open');
+  }
+
+  var opensSeq = 0;
+  function showOpens(recordId) {
+    var my = ++opensSeq;
+    if (!recordId || !cur || !cur.client || !cur.client.url) return;
+    CJ.fetchOpens(recordId).then(function (data) {
+      if (my !== opensSeq || !data || !cur || cur.id !== recordId) return;
+      var base = $('mSub').textContent.replace(/ · КП (ещё не открывали|открывали).*$/, '');
+      if (!data.count) {
+        $('mSub').textContent = base + ' · КП ещё не открывали';
+      } else {
+        $('mSub').textContent = base + ' · КП открывали ' + data.count +
+          ' ' + declOfNum(data.count, ['раз', 'раза', 'раз']) + ', последний — ' + fmtDateTime(data.last);
+      }
+    });
+  }
+
+  function declOfNum(n, forms) {
+    n = Math.abs(n) % 100;
+    var n1 = n % 10;
+    if (n > 10 && n < 20) return forms[2];
+    if (n1 > 1 && n1 < 5) return forms[1];
+    if (n1 === 1) return forms[0];
+    return forms[2];
+  }
+
+  function closeRecord() {
+    $('recModal').classList.remove('open');
+    cur = null;
+    render();
+  }
+
+  function renderRows() {
+    var body = $('rowsBody');
+    body.innerHTML = (cur.rows || []).map(function (r, i) {
+      var qty = CJ.rowQty(r);
+      var sum = qty * CJ.num(r.price);
+      var withVat = sum * 1.2;
+      return '<tr data-idx="' + i + '">' +
+        '<td><input type="text" data-f="label" list="catNames" value="' + esc(r.label) + '"></td>' +
+        '<td><input type="text" class="r" data-f="qtyCalc" value="' + String(CJ.num(r.qtyCalc)).replace('.', ',') + '"></td>' +
+        '<td><input type="text" class="r" data-f="qtyReserve" value="' + String(CJ.num(r.qtyReserve)).replace('.', ',') + '"></td>' +
+        '<td><input type="text" data-f="unit" value="' + esc(r.unit || 'шт.') + '"></td>' +
+        '<td><input type="text" class="r" data-f="price" value="' + String(CJ.num(r.price)).replace('.', ',') + '"></td>' +
+        '<td class="calc">' + money(withVat) + '</td>' +
+        '<td><button type="button" class="del" data-del="' + i + '" title="Удалить позицию">✕</button></td>' +
+      '</tr>';
+    }).join('');
+    updateTotals();
+  }
+
+  function updateTotals() {
+    var t = CJ.computeTotals(cur.rows);
+    cur.totals = t;
+    $('tSubtotal').textContent = money(t.subtotal);
+    $('tVat').textContent = money(t.vat);
+    $('tTotal').textContent = money(t.total);
+  }
+
+  function renderComments() {
+    var el = $('commentsList');
+    var list = cur.comments || [];
+    if (!list.length) {
+      el.innerHTML = '<div class="hintline">Комментариев пока нет.</div>';
+      return;
+    }
+    el.innerHTML = list.slice().reverse().map(function (c) {
+      return '<div class="cmt"><div class="h">' + esc(c.by || '—') + ' · ' + fmtDateTime(c.at) + '</div>' + esc(c.text) + '</div>';
+    }).join('');
+  }
+
+  function renderClientLink() {
+    var w = $('clientLinkWrap');
+    var url = (cur.client && cur.client.url) || '';
+    if (!url) { w.style.display = 'none'; return; }
+    w.style.display = 'flex';
+    $('clientUrl').value = url;
+    $('btnOpenUrl').href = url;
+  }
+
+  function collect() {
+    cur.status = $('mStatus').value;
+    cur.number = $('mNumber').value.trim();
+    cur.createdBy = $('mManager').value.trim() || CJ.manager();
+    cur.comment = $('mComment').value.trim();
+
+    cur.contractor = cur.contractor || {};
+    C_FIELDS.forEach(function (f) { cur.contractor[f] = $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value.trim(); });
+
+    cur.deal = cur.deal || {};
+    cur.deal.delivery = $('dDelivery').value;
+    cur.deal.payment = CJ.num($('dPayment').value, 100);
+    cur.deal.days = CJ.num($('dDays').value, 3);
+    cur.deal.deliveryData = cur.deal.deliveryData || {};
+    cur.deal.deliveryData.address = $('dAddress').value.trim();
+
+    cur.totals = CJ.computeTotals(cur.rows);
+    return cur;
+  }
+
+  function saveCurrent(silent) {
+    if (!cur) return null;
+    collect();
+    if (!cur.number) cur.number = CJ.nextNumber(cur.series);
+    if (comparable(cur) !== curBase) {
+      CJ.addHistory(cur, 'edited');
+      curBase = comparable(cur);
+    }
+    var saved = CJ.save(cur, { assignNumber: false });
+    if (!silent && saved) notify('✓ Сохранено: ' + cur.number);
+    return saved;
+  }
+
+  function comparable(r) {
+    return JSON.stringify({
+      number: r.number, status: r.status, createdBy: r.createdBy, comment: r.comment,
+      contractor: r.contractor || null, deal: r.deal || null,
+      rows: r.rows || [], comments: r.comments || []
+    });
+  }
+
+  function historyLabel(action) {
+    var a = String(action == null ? '' : action);
+    if (a === 'created') return 'Создан';
+    if (a === 'edited') return 'Изменён';
+    if (a === 'from calculator') return 'Создан из калькулятора';
+    if (a === 'new invoice from journal') return 'Создан новый счёт из журнала';
+    var m = a.match(/^duplicated from (.+)$/);
+    if (m) return 'Скопирован из ' + m[1];
+    var m2 = a.match(/^number reassigned to (.+)$/);
+    if (m2) return 'Номер изменён на ' + m2[1];
+    if (/^client link:/.test(a)) return 'Отправлена ссылка клиенту';
+    return a || 'Изменение';
+  }
+
+  function renderHistory() {
+    var el = $('historyList');
+    if (!el) return;
+    var list = (cur.history || []).slice().reverse();
+    if (!list.length) {
+      el.innerHTML = '<div class="hintline">Изменений пока не было.</div>';
+      return;
+    }
+    el.innerHTML = list.map(function (h) {
+      return '<div class="cmt"><div class="h">' + fmtDateTime(h.at) + ' · ' + esc(h.by || '—') + '</div>' +
+        esc(historyLabel(h.action)) + '</div>';
+    }).join('');
+  }
+
+  function actionOpenCalc(rec) {
+    // Если запись создана Армстронгом — ведем в его репозиторий
+    if (rec.type === 'armstrong') {
+      var url = 'https://6471811-source.github.io/Cubica-armstrong/';
+      if (rec.id) url += '?jid=' + encodeURIComponent(rec.id);
+      window.open(url, '_blank');
+      notify('Открываю калькулятор Армстронга по записи ' + (rec.number || rec.id));
+      return;
+    }
+    // Иначе (Кубота или любая другая) — стандартная логика
+    var url = CJ.calcUrlForRecord(rec);
+    window.open(url, '_blank');
+    notify('Открываю калькулятор по записи ' + (rec.number || rec.id));
+  }
+  function actionOpenI5(rec) {
+    var url = CJ.i5UrlForRecord(rec);
+    window.open(url, '_blank');
+    notify('Открываю счёт по записи ' + (rec.number || rec.id));
+  }
+  
+
+  function actionSendKp(rec) {
+    if (!rec.rows || !rec.rows.length) {
+      if (!confirm('В записи нет позиций. Сформировать ссылку всё равно?')) return;
+    }
+    notify('Формирую ссылку для клиента…');
+    CJ.sendKpToClient(rec).then(function (url) {
+      if (cur && cur.id === rec.id) { cur = JSON.parse(JSON.stringify(CJ.get(rec.id))); renderClientLink(); showOpens(cur.id); }
+      render();
+      notify('✓ Ссылка готова');
+      copyText(url);
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось создать ссылку: ' + e.message, true);
+    });
+  }
+/* Обновляет содержимое уже сгенерированной ссылки клиента.
+   Используется когда счёт помечен «Оплачено» — раскрываем клиенту
+   детали раскроя (pieces), которые в обычном режиме скрыты.
+
+   ★ ПРАВКА: добавлен заголовок Authorization, если в настройках
+   задан apiToken. Иначе Worker отбивал запрос 401, и KV не обновлялся —
+   клиент видел старое КП без paid:true. */
+function refreshClientPayload(rec) {
+  var CJ_local = window.CubicaJournal;
+  if (!CJ_local) return;
+  var token = rec.client && rec.client.token;
+  if (!token) { notify('У записи нет клиентской ссылки', true); return; }
+
+  var s = CJ_local.settings();
+  var apiBase = (s.apiBase || '').replace(/\/+$/, '');
+  if (!apiBase) { notify('Не задан адрес сервиса', true); return; }
+
+  /* Формируем payload так же, как при первой отправке,
+     но добавляем paid: true — kp это увидит и раскроет pieces */
+  var payload = CJ_local.buildClientPayload(rec);
+  payload.paid = true;
+  payload.paidAt = CJ_local.nowISO();
+
+  var data = CJ_local.b64enc(JSON.stringify(payload));
+
+  /* ★ Собираем заголовки с токеном, если он задан */
+  var headers = { 'Content-Type': 'application/json' };
+  if (s.apiToken) headers['Authorization'] = 'Bearer ' + s.apiToken;
+
+  notify('Обновляю ссылку клиента…');
+  fetch(apiBase + '/update/' + encodeURIComponent(token), {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({ payload: data })
+  }).then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }).then(function () {
+    notify('✓ Ссылка клиента обновлена — раскрой раскрыт');
+    CJ_local.addHistory(rec, 'client link refreshed (paid)');
+    CJ_local.save(rec, { assignNumber: false });
+  }).catch(function (e) {
+    console.error(e);
+    notify('Не удалось обновить ссылку: ' + e.message, true);
+  });
+}
+  function actionDuplicate(rec) {
+    var done = function (copy) {
+      if (!copy) { notify('Не удалось скопировать', true); return; }
+      render();
+      notify('✓ Создана копия: ' + copy.number);
+      openRecord(copy.id);
+    };
+    if (CJ.isApi() && CJ.duplicateReserved) {
+      notify('Запрашиваю номер для копии…');
+      CJ.duplicateReserved(rec.id).then(done).catch(function (e) {
+        notify('Не удалось скопировать: ' + e.message, true);
+      });
+      return;
+    }
+    done(CJ.duplicate(rec.id));
+  }
+
+  function actionDelete(rec) {
+    if (!confirm('Удалить запись ' + (rec.number || rec.id) + '?\n\nДействие необратимо.')) return;
+    if (!CJ.remove(rec.id)) {
+      notify('Удалить не удалось', true);
+      return;
+    }
+    if (cur && cur.id === rec.id) { $('recModal').classList.remove('open'); cur = null; }
+    render();
+    notify('Запись удалена');
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {});
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+
+  function createInvoice() {
+    var openBlank = function (rec) {
+      var url = CJ.i5UrlForRecord(rec, { blank: true });
+      window.open(url, '_blank');
+    };
+
+    if (!CJ.isApi()) {
+      var rec = CJ.create({ series: 'invoice' });
+      rec.number = CJ.nextNumber('invoice');
+      rec.history.push({ at: CJ.nowISO(), by: CJ.manager(), action: 'new invoice from journal' });
+      CJ.save(rec, { assignNumber: false });
+      render();
+      notify('Создан ' + rec.number + ' — открываю i5 пустым');
+      openBlank(rec);
+      return;
+    }
+
+    notify('Запрашиваю номер на сервере…');
+    CJ.createReserved('invoice').then(function (rec) {
+      CJ.addHistory(rec, 'new invoice from journal');
+      CJ.save(rec, { assignNumber: false });
+      render();
+      notify('Создан ' + rec.number + ' — открываю i5 пустым');
+      openBlank(rec);
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось создать счёт: ' + e.message, true);
+    });
+  }
+
+  function openCalculator() {
+    var url = CJ.calcUrlForRecord(null);
+    if (!confirm('Открыть калькулятор Кубота?\n\n' + url)) return;
+    window.open(url, '_blank');
+  }
+
+  var BACKUP_REMIND_DAYS = 7;
+
+  function exportJson() {
+    var data = CJ.exportJSON();
+    if (!data.records.length) { notify('Журнал пуст', true); return; }
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'cubica_journal_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    CJ.saveSettings({ lastExportAt: CJ.nowISO() });
+    updateBackupWarn();
+    notify('Экспортировано записей: ' + data.records.length);
+  }
+
+  function updateBackupWarn() {
+    var el = $('backupWarn');
+    if (!el) return;
+    var s = CJ.settings();
+    var count = CJ.all().length;
+    if (s.mode === 'api' || !count) { el.classList.remove('show'); return; }
+
+    var last = s.lastExportAt ? new Date(s.lastExportAt) : null;
+    var days = last && !isNaN(last.getTime())
+      ? Math.floor((Date.now() - last.getTime()) / 86400000)
+      : null;
+
+    if (days !== null && days < BACKUP_REMIND_DAYS) { el.classList.remove('show'); return; }
+
+    $('backupText').textContent = last
+      ? 'Журнал хранится только в этом браузере. Последняя копия — ' + days +
+        ' ' + declOfNum(days, ['день', 'дня', 'дней']) + ' назад, записей: ' + count + '.'
+      : 'Журнал хранится только в этом браузере и нигде больше. Записей: ' + count +
+        '. Если очистить данные браузера, журнал пропадёт — скачайте копию.';
+    el.classList.add('show');
+  }
+
+  function importJson(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try { data = JSON.parse(reader.result); }
+      catch (e) { notify('Не удалось прочитать файл', true); return; }
+      var incoming = Array.isArray(data) ? data : (data && data.records);
+      if (!Array.isArray(incoming)) { notify('В файле нет списка записей', true); return; }
+
+      var current = CJ.all().length;
+      var replace = false;
+      if (current) {
+        replace = confirm(
+          'В файле записей: ' + incoming.length + ', в журнале сейчас: ' + current + '.\n\n' +
+          'ОК — ЗАМЕНИТЬ журнал содержимым файла (восстановление из копии).\n' +
+          'Отмена — добавить и обновить записи из файла, остальное оставить как есть.'
+        );
+      }
+      try {
+        var res = CJ.importJSON(data, { replace: replace });
+        render();
+        var parts = ['добавлено ' + res.added, 'обновлено ' + res.updated];
+        if (replace) parts.push('журнал заменён');
+        if (res.removed) parts.push('удалено ' + res.removed);
+        notify('Импорт: ' + parts.join(', '));
+      } catch (e) {
+        notify('Ошибка импорта: ' + e.message, true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function runSelfCheck() {
+    var steps = [];
+    function step(name, fn) {
+      try { steps.push({ name: name, ok: true, detail: fn() || '' }); }
+      catch (e) {
+        var detail = (e && e.message) || String(e);
+        if (e && e.name && e.name !== 'Error') detail = e.name + ' — ' + detail;
+        steps.push({ name: name, ok: false, detail: detail });
+      }
+    }
+    var probe = 'cubica_selftest_probe';
+    step('Локальное хранилище', function () {
+      localStorage.setItem(probe, 'ok');
+      var back = localStorage.getItem(probe);
+      localStorage.removeItem(probe);
+      if (back !== 'ok') throw new Error('не совпало');
+      return 'работает';
+    });
+    var testId = null;
+    step('Создание записи', function () {
+      var rec = CJ.create({ series: 'invoice' });
+      rec.contractor.name = 'Проверка (удаляется)';
+      var saved = CJ.save(rec, { assignNumber: false, localOnly: true });
+      if (!saved) throw new Error('не сохранилась');
+      testId = saved.id;
+      if (!CJ.get(testId)) throw new Error('не читается');
+      return 'ok, номер ' + saved.number;
+    });
+    step('Расчёт итогов', function () {
+      var t = CJ.computeTotals([{ label: 'тест', qtyCalc: 2, qtyReserve: 0, unit: 'шт.', price: 10 }]);
+      if (Math.abs(t.total - 24) > 0.001) throw new Error('ожидалось 24, получено ' + t.total);
+      return 'НДС 20 % считается верно';
+    });
+    step('Удаление', function () {
+      if (!testId) throw new Error('нечего удалять');
+      if (!CJ.remove(testId)) throw new Error('не удалилось');
+      render();
+      return 'ok';
+    });
+    var ok = steps.every(function (s) { return s.ok; });
+    alert((ok ? '✅ Журнал исправен.\n\n' : '❌ Есть проблемы.\n\n') +
+      steps.map(function (s) { return (s.ok ? '✓ ' : '✗ ') + s.name + (s.detail ? ' — ' + s.detail : ''); }).join('\n'));
+    return { ok: ok, steps: steps };
+  }
+
+  function fillSettings() {
+    var s = CJ.settings();
+    $('sManager').value = s.manager || '';
+    $('sVat').value = Math.round(CJ.num(s.vatRate, 0.2) * 100);
+    $('sYearReset').value = s.yearReset ? '1' : '0';
+    $('sMode').value = s.mode || 'local';
+    $('sFmtInvoice').value = (s.numberFormat && s.numberFormat.invoice) || '';
+    $('sFmtKp').value = (s.numberFormat && s.numberFormat.kp) || '';
+    $('sUrlCalc').value = s.urls.calc || '';
+    $('sUrlI5').value = s.urls.i5 || '';
+    $('sUrlKp').value = s.urls.kp || '';
+    $('sApiBase').value = s.apiBase || '';
+    $('sApiToken').value = s.apiToken || '';
+  }
+
+  function saveSettingsFromForm() {
+    CJ.saveSettings({
+      manager: $('sManager').value.trim() || 'Менеджер',
+      vatRate: CJ.num($('sVat').value, 20) / 100,
+      yearReset: $('sYearReset').value === '1',
+      mode: $('sMode').value,
+      numberFormat: { invoice: $('sFmtInvoice').value.trim(), kp: $('sFmtKp').value.trim() },
+      urls: {
+        calc: $('sUrlCalc').value.trim(),
+        i5: $('sUrlI5').value.trim(),
+        kp: $('sUrlKp').value.trim()
+      },
+      apiBase: $('sApiBase').value.trim(),
+      apiToken: $('sApiToken').value.trim()
+    });
+    $('mgrInput').value = CJ.manager();
+    applyModeBadge();
+    render();
+    afterModeChange();
+    notify('✓ Настройки сохранены');
+  }
+
+  function afterModeChange() {
+    if (!CJ.isApi()) return;
+    doSync(true);
+  }
+
+  function doSync(silent) {
+    if (!CJ.isApi()) { if (!silent) notify('Журнал работает локально'); return; }
+    $('btnSync').textContent = '⟳ Синхронизация…';
+    $('btnSync').disabled = true;
+    CJ.sync().then(function (records) {
+      render();
+      if (!silent) notify('✓ Синхронизировано: ' + records.length);
+    }).catch(function (e) {
+      console.error(e);
+      notify('Не удалось связаться с сервером: ' + e.message, true);
+    }).then(function () {
+      $('btnSync').textContent = '⟳ Синхронизировать';
+      $('btnSync').disabled = false;
+    });
+  }
+
+  function applyModeBadge() {
+    var s = CJ.settings();
+    var b = $('modeBadge');
+    var api = s.mode === 'api';
+    b.classList.toggle('api', api);
+    b.textContent = api ? 'Хранилище: сервер' : 'Хранилище: локально';
+    $('localWarn').classList.toggle('show', !api);
+    $('btnSync').style.display = api ? 'inline-flex' : 'none';
+  }
+
+  function bind() {
+    $('mgrInput').addEventListener('change', function () {
+      CJ.saveSettings({ manager: this.value.trim() || 'Менеджер' });
+      this.value = CJ.manager();
+      notify('Менеджер: ' + CJ.manager());
+    });
+
+    $('btnNewInvoice').addEventListener('click', createInvoice);
+    $('btnNewKp').addEventListener('click', openCalculator);
+    $('btnNewArmstrong').addEventListener('click', function() {
+var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
+  if (!confirm('Открыть калькулятор Армстронга?\n\n' + armstrongUrl)) return;
+  window.open(armstrongUrl, '_blank');
+});
+    $('btnExport').addEventListener('click', exportJson);
+    $('btnImport').addEventListener('click', function () { $('importFile').click(); });
+    $('importFile').addEventListener('change', function () {
+      if (this.files && this.files[0]) importJson(this.files[0]);
+      this.value = '';
+    });
+    $('btnSettings').addEventListener('click', function () {
+      fillSettings();
+      $('setModal').classList.add('open');
+    });
+    $('btnSync').addEventListener('click', function () { doSync(false); });
+    $('btnSelfCheck').addEventListener('click', runSelfCheck);
+    $('btnBackupNow').addEventListener('click', exportJson);
+    $('btnSetSave').addEventListener('click', function () { saveSettingsFromForm(); $('setModal').classList.remove('open'); });
+    $('btnSetClose').addEventListener('click', function () { $('setModal').classList.remove('open'); });
+    $('btnResetSettings').addEventListener('click', function () {
+      if (!confirm('Сбросить настройки?')) return;
+      try { localStorage.removeItem('cubica_journal_settings_v1'); } catch (e) {}
+      fillSettings();
+      $('mgrInput').value = CJ.manager();
+      applyModeBadge();
+      notify('Настройки сброшены');
+    });
+
+    ['search', 'statusFilter', 'seriesFilter', 'periodFilter', 'sortFilter'].forEach(function (id) {
+      $(id).addEventListener('input', renderTable);
+      $(id).addEventListener('change', renderTable);
+    });
+
+    $('recsBody').addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      var rec = CJ.get(tr.getAttribute('data-id'));
+      if (!rec) return;
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) { openRecord(rec.id); return; }
+      var act = btn.getAttribute('data-act');
+      if (act === 'open') openRecord(rec.id);
+      else if (act === 'calc') actionOpenCalc(rec);
+      else if (act === 'i5') actionOpenI5(rec);
+      else if (act === 'dup') actionDuplicate(rec);
+      else if (act === 'del') actionDelete(rec);
+    });
+
+    $('rowsBody').addEventListener('input', function (e) {
+      var inp = e.target.closest('input[data-f]');
+      if (!inp || !cur) return;
+      var idx = parseInt(inp.closest('tr').getAttribute('data-idx'), 10);
+      var f = inp.getAttribute('data-f');
+      var row = cur.rows[idx];
+      if (!row) return;
+      if (f === 'label' || f === 'unit') row[f] = inp.value;
+      else row[f] = parseNum(inp.value);
+      if (f === 'label') {
+        var ci = CJ.catalogFind && CJ.catalogFind(inp.value);
+        if (ci) {
+          var trc = inp.closest('tr');
+          if (!CJ.num(row.price) && ci.price) { row.price = ci.price; trc.querySelector('input[data-f="price"]').value = String(ci.price).replace('.', ','); }
+          if (ci.unit && (!row.unit || row.unit === 'шт.')) { row.unit = ci.unit; trc.querySelector('input[data-f="unit"]').value = ci.unit; }
+          trc.querySelector('.calc').textContent = money(CJ.rowQty(row) * CJ.num(row.price) * 1.2);
+        }
+      }
+      if (f !== 'label' && f !== 'unit') {
+        var tr = inp.closest('tr');
+        var qty = CJ.rowQty(row);
+        tr.querySelector('.calc').textContent = money(qty * CJ.num(row.price) * 1.2);
+      }
+      updateTotals();
+    });
+
+    $('rowsBody').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-del]');
+      if (!b || !cur) return;
+      cur.rows.splice(parseInt(b.getAttribute('data-del'), 10), 1);
+      renderRows();
+    });
+
+    $('btnAddRow').addEventListener('click', function () {
+      if (!cur) return;
+      cur.rows.push({ label: 'Новая позиция', qtyCalc: 1, qtyReserve: 0, unit: 'шт.', price: 0 });
+      renderRows();
+      var inputs = $('rowsBody').querySelectorAll('tr:last-child input');
+      if (inputs[0]) inputs[0].focus();
+    });
+
+    $('newComment').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || !cur) return;
+      var text = this.value.trim();
+      if (!text) return;
+      cur.comments = cur.comments || [];
+      cur.comments.push({ at: CJ.nowISO(), by: CJ.manager(), text: text });
+      this.value = '';
+      renderComments();
+      collect();
+      CJ.save(cur, { assignNumber: false });
+    });
+
+$('mStatus').addEventListener('change', function () {
+  if (!cur) return;
+  var oldStatus = cur.status;
+  collect();
+  CJ.save(cur, { assignNumber: false });
+  render();
+  /* Если статус сменился на «Оплачено» и у записи есть клиентская ссылка —
+     обновляем payload в KV, чтобы клиент увидел раскрытый раскрой */
+  if (cur.status === 'paid' && oldStatus !== 'paid' && cur.client && cur.client.token) {
+    refreshClientPayload(cur);
+  }
+});
+
+    $('btnOpenCalc').addEventListener('click', function () { if (cur) { saveCurrent(true); actionOpenCalc(cur); } });
+    $('btnOpenI5').addEventListener('click', function () { if (cur) { saveCurrent(true); actionOpenI5(cur); } });
+    $('btnKpLink').addEventListener('click', function () { if (cur) { saveCurrent(true); actionSendKp(cur); } });
+    $('btnDup').addEventListener('click', function () { if (cur) { saveCurrent(true); actionDuplicate(cur); } });
+    $('btnDel').addEventListener('click', function () { if (cur) actionDelete(cur); });
+    $('btnClose').addEventListener('click', function () {
+      if (cur) saveCurrent(true);
+      closeRecord();
+    });
+    $('btnSaveClose').addEventListener('click', function () { saveCurrent(); closeRecord(); });
+    $('btnCopyUrl').addEventListener('click', function () {
+      copyText($('clientUrl').value);
+      notify('Ссылка скопирована');
+    });
+
+    ['recModal', 'setModal'].forEach(function (id) {
+      $(id).addEventListener('click', function (e) {
+        if (e.target === this) {
+          if (id === 'recModal' && cur) saveCurrent(true);
+          this.classList.remove('open');
+          if (id === 'recModal') { cur = null; render(); }
+        }
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if ($('recModal').classList.contains('open')) { if (cur) saveCurrent(true); $('recModal').classList.remove('open'); cur = null; render(); }
+      else if ($('setModal').classList.contains('open')) $('setModal').classList.remove('open');
+    });
+
+    CJ.on('records-changed', function (e) {
+      if (cur && e && e.external) {
+        var fresh = CJ.get(cur.id);
+        if (fresh) {
+          cur = JSON.parse(JSON.stringify(fresh));
+          $('mNumber').value = cur.number || '';
+          $('mUpdated').value = fmtDateTime(cur.updatedAt);
+          $('mManager').value = cur.createdBy || '';
+          C_FIELDS.forEach(function (f) {
+            $('c' + f.charAt(0).toUpperCase() + f.slice(1)).value =
+              (cur.contractor && cur.contractor[f]) || '';
+          });
+          if (cur.deal) {
+            $('dDelivery').value = cur.deal.delivery || 'pickup';
+            $('dPayment').value = cur.deal.payment != null ? cur.deal.payment : 100;
+            $('dDays').value = cur.deal.days != null ? cur.deal.days : 3;
+            $('dAddress').value = (cur.deal.deliveryData && cur.deal.deliveryData.address) || '';
+          }
+          $('mStatus').value = cur.status;
+          $('mComment').value = cur.comment || '';
+          renderRows();
+          renderComments();
+          renderHistory();
+          updateTotals();
+          curBase = comparable(cur);
+          notify('Данные обновлены из i5');
+        }
+      } else if (!cur) {
+        render();
+      } else {
+        renderStats();
+      }
+    });
+    CJ.on('sync-error', function () {
+      notify('Запись сохранена локально, но не ушла на сервер', true);
+    });
+    CJ.on('storage-error', function () {
+      notify('В браузере закончилось место — изменения НЕ сохранены', true);
+    });
+    CJ.on('number-reassigned', function (d) {
+      notify('Номер был занят — присвоен ' + d.number);
+      if (cur && cur.id === d.id) {
+        cur = JSON.parse(JSON.stringify(CJ.get(d.id)));
+        $('mNumber').value = cur.number;
+        renderHistory();
+        curBase = comparable(cur);
+      }
+      render();
+    });
+  }
+
+  /* ============================================================
+     СПРАВОЧНИК
+     ============================================================ */
+  var catItems = [];
+  var catBase = '';
+  var catLoaded = false;
+
+  function catIsDirty() { return JSON.stringify(catItems) !== catBase; }
+  function catMarkDirty() { $('catDirty').classList.toggle('show', catIsDirty()); }
+  function catLoadFromCore() {
+    catItems = CJ.catalog();
+    catBase = JSON.stringify(catItems);
+    catLoaded = true;
+    catMarkDirty();
+    renderCatalog();
+    fillCatDatalist();
+  }
+  function fillCatDatalist() {
+    var list = CJ.catalogList ? CJ.catalogList() : [];
+    $('catNames').innerHTML = list.map(function (x) { return '<option value="' + esc(x.name) + '">'; }).join('');
+    $('catCount').textContent = CJ.catalog ? CJ.catalog().length : 0;
+  }
+  function fmtNum(v, d) {
+    var n = CJ.num(v, 0);
+    if (!n) return '';
+    return String(+n.toFixed(d == null ? 4 : d)).replace('.', ',');
+  }
+  function catRowHtml(x) {
+    var i = catItems.indexOf(x);
+    var hasSize = x.type === 'plate' || x.type === 'light';
+    var isPlate = x.type === 'plate';
+    var sizeSel = hasSize
+      ? '<select data-cf="size">' + CJ.CATALOG_SIZES.map(function (sz) {
+          return '<option value="' + sz + '"' + (x.size === sz ? ' selected' : '') + '>' + sz.replace('x', '×') + '</option>';
+        }).join('') + '</select>'
+      : '<span style="color:#c5cad1">—</span>';
+    var units = ['м²', 'шт.', 'пог. м', 'компл.'];
+    var unitSel = '<select data-cf="unit">' + units.map(function (u) {
+      return '<option' + (x.unit === u ? ' selected' : '') + '>' + u + '</option>';
+    }).join('') + '</select>';
+    var pack = '<div class="cat-pack"><input type="text" class="r" data-cf="packQty" value="' + fmtNum(x.packQty) + '" placeholder="—"' + (x.packMultiple ? '' : ' disabled') + '>' +
+      '<select data-cf="packUnit"' + (x.packMultiple ? '' : ' disabled') + '><option' + (x.packUnit === 'шт.' ? ' selected' : '') + '>шт.</option>' +
+      (isPlate ? '<option' + (x.packUnit === 'м²' ? ' selected' : '') + '>м²</option>' : '') + '</select></div>';
+    var packHint = '';
+    if (isPlate && x.packMultiple && x.packQty > 0) {
+      var m2pp = CJ.sizeM2(x.size);
+      packHint = x.packUnit === 'м²' ? ('≈ ' + Math.round(x.packQty / m2pp) + ' шт.') : ('= ' + fmtNum(x.packQty * m2pp, 2) + ' м²');
+      pack += '<div style="font-size:11px;color:#9aa1ac;margin-top:2px;padding-left:4px">' + packHint + '</div>';
+    }
+    return '<tr data-ci="' + i + '"' + (x.active ? '' : ' class="off"') + '>' +
+      '<td class="c keep"><input type="checkbox" data-cf="active"' + (x.active ? ' checked' : '') + '></td>' +
+      '<td class="c"><input type="checkbox" data-cf="isDefault"' + (x.isDefault ? ' checked' : '') + '></td>' +
+      '<td><input type="text" data-cf="name" value="' + esc(x.name) + '"></td>' +
+      '<td><input type="text" data-cf="article" value="' + esc(x.article) + '" placeholder="—"></td>' +
+      '<td>' + sizeSel + '</td>' +
+      '<td class="ro">' + (isPlate ? fmtNum(CJ.sizeM2(x.size), 2) : '') + '</td>' +
+      '<td>' + unitSel + '</td>' +
+      '<td class="c"><input type="checkbox" data-cf="packMultiple"' + (x.packMultiple ? ' checked' : '') + '></td>' +
+      '<td>' + pack + '</td>' +
+      '<td><input type="text" class="r" data-cf="price" value="' + fmtNum(x.price, 2) + '" placeholder="0"></td>' +
+      '<td><input type="text" data-cf="note" value="' + esc(x.note) + '" placeholder="—"></td>' +
+      '<td><button type="button" class="cat-del" data-cdel="' + i + '" title="Удалить позицию">✕</button></td>' +
+    '</tr>';
+  }
+  function renderCatalog() {
+    var q = $('catSearch').value.trim().toLowerCase();
+    var tf = $('catTypeFilter').value;
+    var af = $('catActiveFilter').value;
+    var html = '';
+    var shown = 0;
+    CJ.CATALOG_TYPES.forEach(function (t) {
+      if (tf && tf !== t.key) return;
+      var list = catItems.filter(function (x) {
+        if (x.type !== t.key) return false;
+        if (af === '1' && !x.active) return false;
+        if (af === '0' && x.active) return false;
+        if (q && (x.name + ' ' + x.article + ' ' + x.note).toLowerCase().indexOf(q) < 0) return false;
+        return true;
+      });
+      if (!list.length) return;
+      var title = { plate: 'Плиты', light: 'Светильники', profile: 'Профили', other: 'Прочее' }[t.key];
+      html += '<tr class="cat-group"><td colspan="12">' + title + ' · ' + list.length + '</td></tr>';
+      list.forEach(function (x) { html += catRowHtml(x); shown++; });
+    });
+    $('catBody').innerHTML = html;
+    $('catEmpty').style.display = shown ? 'none' : 'block';
+    $('catCount').textContent = catItems.length;
+    $('catWhere').textContent = CJ.isApi()
+      ? ' Справочник общий: хранится на сервере и одинаков у всех сотрудников.'
+      : ' Сейчас справочник хранится только в этом браузере — для общего справочника включите серверный режим в «Настройках».';
+  }
+  function catSetField(x, f, el) {
+    if (f === 'active' || f === 'isDefault' || f === 'packMultiple') {
+      x[f] = el.checked;
+      if (f === 'isDefault' && x.isDefault) {
+        catItems.forEach(function (o) { if (o !== x && o.type === x.type && o.size === x.size) o.isDefault = false; });
+      }
+      if (f === 'packMultiple' && x.packMultiple && x.type === 'plate' && !x.packQty) x.packUnit = 'шт.';
+      return true; // нужна перерисовка
+    }
+    if (f === 'packQty' || f === 'price') { x[f] = parseNum(el.value); return f === 'packQty'; }
+    if (f === 'size') { x.size = el.value; x.m2PerPiece = x.type === 'plate' ? CJ.sizeM2(x.size) : 0; return true; }
+    if (f === 'packUnit') { x.packUnit = el.value; return true; }
+    x[f] = el.value;
+    return false;
+  }
+  function catAdd(type) {
+    var names = { plate: 'Новая плита 600×600', light: 'Новый светильник 600×600', profile: 'Новый профиль', other: 'Новая позиция' };
+    var x = CJ.catalogNormalize({ type: type, name: names[type], active: true });
+    catItems.push(x);
+    $('catTypeFilter').value = '';
+    $('catSearch').value = '';
+    renderCatalog();
+    catMarkDirty();
+    var tr = $('catBody').querySelector('tr[data-ci="' + catItems.indexOf(x) + '"]');
+    if (tr) { var inp = tr.querySelector('input[data-cf="name"]'); inp.focus(); inp.select(); tr.scrollIntoView({ block: 'center' }); }
+  }
+  function catSave() {
+    // проверка: пустые названия и дубли
+    var seen = {};
+    for (var i = 0; i < catItems.length; i++) {
+      var nm = String(catItems[i].name || '').trim();
+      if (!nm) { notify('У позиции нет названия', true); return; }
+      var k = nm.toLowerCase();
+      if (seen[k]) { notify('Повторяется название: ' + nm, true); return; }
+      seen[k] = true;
+      if (catItems[i].packMultiple && !(CJ.num(catItems[i].packQty) > 0)) { notify('Укажите, сколько в пачке: ' + nm, true); return; }
+    }
+    var btn = $('btnCatSave');
+    btn.disabled = true;
+    CJ.catalogSave(catItems).then(function (r) {
+      catItems = CJ.catalog();
+      catBase = JSON.stringify(catItems);
+      catMarkDirty();
+      renderCatalog();
+      fillCatDatalist();
+      notify(r && r.local ? '✓ Справочник сохранён в этом браузере' : '✓ Справочник сохранён на сервере');
+    }).catch(function (e) {
+      catBase = JSON.stringify(CJ.catalog());
+      catMarkDirty();
+      notify('Сохранено локально, на сервер не ушло: ' + (e && e.message || e), true);
+    }).then(function () { btn.disabled = false; });
+  }
+  function catReload() {
+    if (catIsDirty() && !confirm('Несохранённые изменения справочника будут потеряны. Продолжить?')) return;
+    var p = CJ.isApi() ? CJ.catalogSync() : Promise.resolve();
+    p.then(function () { catLoadFromCore(); notify('Справочник обновлён'); })
+     .catch(function (e) { catLoadFromCore(); notify('Сервер недоступен: ' + (e && e.message || e), true); });
+  }
+  function showTab(name) {
+    if (name !== 'catalog' && catIsDirty() && catLoaded) {
+      if (!confirm('В справочнике есть несохранённые изменения. Сохранить?')) { catItems = JSON.parse(catBase); catMarkDirty(); }
+      else catSave();
+    }
+    document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === name); });
+    $('tabJournal').hidden = name !== 'journal';
+    $('tabCatalog').hidden = name !== 'catalog';
+    if (name === 'catalog') { if (!catLoaded) catLoadFromCore(); else renderCatalog(); }
+    try { history.replaceState(null, '', name === 'catalog' ? '#catalog' : location.pathname + location.search); } catch (e) {}
+  }
+  function bindCatalog() {
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); });
+    });
+    document.querySelectorAll('[data-cat-add]').forEach(function (b) {
+      b.addEventListener('click', function () { catAdd(b.getAttribute('data-cat-add')); });
+    });
+    $('btnCatSave').addEventListener('click', catSave);
+    $('btnCatReload').addEventListener('click', catReload);
+    ['catSearch', 'catTypeFilter', 'catActiveFilter'].forEach(function (id) {
+      $(id).addEventListener(id === 'catSearch' ? 'input' : 'change', renderCatalog);
+    });
+    function onEdit(e) {
+      var el = e.target.closest('[data-cf]');
+      if (!el) return;
+      var tr = el.closest('tr[data-ci]');
+      var x = catItems[parseInt(tr.getAttribute('data-ci'), 10)];
+      if (!x) return;
+      var redraw = catSetField(x, el.getAttribute('data-cf'), el);
+      if (redraw && e.type === 'change') {
+        renderCatalog();
+      }
+      catMarkDirty();
+    }
+    $('catBody').addEventListener('input', onEdit);
+    $('catBody').addEventListener('change', onEdit);
+    $('catBody').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-cdel]');
+      if (!b) return;
+      var x = catItems[parseInt(b.getAttribute('data-cdel'), 10)];
+      if (!x || !confirm('Удалить «' + x.name + '» из справочника?\nЕсли позиция может понадобиться позже — лучше снимите галочку «Акт.».')) return;
+      catItems.splice(catItems.indexOf(x), 1);
+      renderCatalog();
+      catMarkDirty();
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (catLoaded && catIsDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+    CJ.on('catalog-changed', function (e) {
+      if (e && e.external && !catIsDirty()) catLoadFromCore();
+      else fillCatDatalist();
+    });
+  }
+
+  function boot() {
+    fillStatusSelect();
+    fillSettings();
+    $('mgrInput').value = CJ.manager();
+    applyModeBadge();
+    $('statusFilter').innerHTML = '<option value="">Все статусы</option>' + CJ.STATUSES.map(function (s) {
+      return '<option value="' + s.key + '">' + esc(s.label) + '</option>';
+    }).join('');
+    bind();
+    bindCatalog();
+    render();
+    fillCatDatalist();
+
+    if (CJ.isApi()) {
+      doSync(true);
+      if (CJ.catalogSync) CJ.catalogSync().then(function () { if (!catIsDirty()) { if (catLoaded) catLoadFromCore(); else fillCatDatalist(); } }).catch(function () {});
+    }
+    if (location.hash === '#catalog') showTab('catalog');
+
+    var params = new URLSearchParams(location.search);
+    if (params.get('id') && CJ.get(params.get('id'))) openRecord(params.get('id'));
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
