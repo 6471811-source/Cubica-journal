@@ -1,5 +1,5 @@
 /* ============================================================
-   CUBICA · Ядро журнала (Универсальный адаптер v1.5 + справочник (номенклатура 1С))
+   CUBICA · Ядро журнала (Универсальный адаптер v1.6 + справочник (номенклатура 1С))
    Подключается на: журнал, i5, калькуляторы
    ============================================================ */
 (function (global) {
@@ -421,7 +421,8 @@
         label: r.label, 
         qty: rowQty(r), 
         unit: r.unit || 'шт.', 
-        price: num(r.price) 
+        price: num(r.price),
+        role: r.role || undefined
       };
     });
 
@@ -735,8 +736,18 @@
   }
 
   // ---- Слой настроек ----
+  function isRoleCode(c) { return String(c || '').indexOf('role:') === 0; }
+  function cleanRole(x) {
+    var o = { code: String(x.code), nomCode: String(x.nomCode || '') };
+    if (!o.nomCode) return null;
+    if (x.name) o.name = String(x.name);
+    if (x.unit) o.unit = String(x.unit);
+    if (num(x.m2PerPiece, 0) > 0) o.m2PerPiece = num(x.m2PerPiece, 0);
+    return o;
+  }
   function cleanSetting(x) {
     x = x || {};
+    if (isRoleCode(x.code)) return cleanRole(x);
     var o = { code: String(x.code || '') };
     if (!o.code) return null;
     if (x.folder) o.folder = true;
@@ -748,14 +759,17 @@
     if (x.note) o.note = String(x.note);
     return o;
   }
-  function settingIsEmpty(o) { return !o || CAT_FIELDS.every(function (f) { return o[f] === undefined; }); }
+  function settingIsEmpty(o) { if (o && isRoleCode(o.code)) return !o.nomCode; return !o || CAT_FIELDS.every(function (f) { return o[f] === undefined; }); }
   function catalogMeta() {
     try { var raw = localStorage.getItem(K_CATALOG); if (raw) return JSON.parse(raw); } catch (e) {}
     return null;
   }
-  function catalogAll() { // массив настроек (только заполненные)
+  function catalogRaw() { // все записи: настройки позиций + привязки ролей
     var m = catalogMeta();
     return (m && Array.isArray(m.items) ? m.items : []).map(cleanSetting).filter(function (o) { return o && !settingIsEmpty(o); });
+  }
+  function catalogAll() { // настройки позиций (без ролей)
+    return catalogRaw().filter(function (o) { return !isRoleCode(o.code); });
   }
   function catalogMap() { var map = {}; catalogAll().forEach(function (o) { map[o.code] = o; }); return map; }
   function catalogWriteLocal(items, meta) {
@@ -764,8 +778,10 @@
     emit('catalog-changed', { count: items.length });
     return true;
   }
-  function catalogSave(items) {
-    items = (items || []).map(cleanSetting).filter(function (o) { return o && !settingIsEmpty(o); });
+  function catalogSave(items, roleItems) {
+    items = (items || []).filter(function (o) { return o && !isRoleCode(o.code); });
+    if (!roleItems) roleItems = catalogRaw().filter(function (o) { return isRoleCode(o.code); });
+    items = items.concat(roleItems).map(cleanSetting).filter(function (o) { return o && !settingIsEmpty(o); });
     var prev = catalogMeta() || {};
     catalogWriteLocal(items, { version: prev.version, updatedAt: nowISO() });
     if (!isApi()) return Promise.resolve({ ok: true, local: true, count: items.length });
@@ -780,8 +796,8 @@
       // настройки v2 — только записи с кодом 1С (старый ручной список v1 игнорируем)
       var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (x) { return x && x.code; });
       if (!items.length) {
-        var local = catalogAll();
-        if (local.length) return catalogSave(local).then(function () { return local; });
+        var local = catalogRaw();
+        if (local.length) return catalogSave(catalogAll()).then(function () { return catalogAll(); });
         catalogWriteLocal([], data);
         return [];
       }
@@ -858,8 +874,109 @@
     return res;
   }
 
+  /* ============================================================
+     РОЛИ КАЛЬКУЛЯТОРОВ: строка калькулятора → позиция 1С
+     Калькулятор считает по роли (в своих единицах), а какая позиция 1С
+     стоит за ролью — задаётся в журнале («Справочник → Роли Армстронга»).
+     Хранится в том же списке справочника записями с кодом 'role:<ключ>'.
+     ============================================================ */
+  var ROLE_DEFS = {
+    armstrong: { title: 'Армстронг', roles: [
+      { key: 'arm.tile600',   label: 'Плита 600×600',              calcUnit: 'шт', m2: 0.36, def: 'Плита потолочная 600х600х12 мм' },
+      { key: 'arm.tile1200',  label: 'Плита 1200×600',             calcUnit: 'шт', m2: 0.72, def: 'Плита потолочная 1200х600х12 мм' },
+      { key: 'arm.main3600',  label: 'Т-профиль несущий 3600',      calcUnit: 'шт', lenM: 3.6, def: 'Т-профиль 24х33х3600 Премиум белый' },
+      { key: 'arm.cross1200', label: 'Т-профиль поперечный 1200',   calcUnit: 'шт', lenM: 1.2, def: 'Т-профиль 24х26х1200 белый' },
+      { key: 'arm.cross600',  label: 'Т-профиль поперечный 600',    calcUnit: 'шт', lenM: 0.6, def: 'Т-профиль 24х20х600 Стандарт белый' },
+      { key: 'arm.angle',     label: 'Уголок пристенный 3 м',       calcUnit: 'шт', lenM: 3,   def: 'Уголок пристеночный 19х19 (3м) белый' },
+      { key: 'arm.euro500',   label: 'Европодвес 500 мм',           calcUnit: 'шт', def: 'Европодвес 500 мм' },
+      { key: 'arm.hook250',   label: 'Тяга-крюк 250 мм',            calcUnit: 'шт', def: 'Тяга-крюк 250 мм d 4,0' },
+      { key: 'arm.hook350',   label: 'Тяга-крюк 350 мм',            calcUnit: 'шт', def: 'Тяга-крюк 350 мм d 4,0' },
+      { key: 'arm.hook500',   label: 'Тяга-крюк 500 мм',            calcUnit: 'шт', def: 'Тяга-крюк 500 мм d 4,0' },
+      { key: 'arm.hook1000',  label: 'Тяга-крюк 1000 мм',           calcUnit: 'шт', def: 'Тяга-крюк 1000 мм d 4,0' },
+      { key: 'arm.loop350',   label: 'Тяга-петля 350 мм',           calcUnit: 'шт', def: 'Тяга-петля 350 мм d 4,0' },
+      { key: 'arm.loop500',   label: 'Тяга-петля 500 мм',           calcUnit: 'шт', def: 'Тяга-петля 500 мм d 4,0' },
+      { key: 'arm.loop1000',  label: 'Тяга-петля 1000 мм',          calcUnit: 'шт', def: 'Тяга-петля 1000 мм d 4,0' },
+      { key: 'arm.spring',    label: 'Пружина европодвеса',         calcUnit: 'шт', def: 'Пружина европодвеса d 4,0' },
+      { key: 'arm.anchor',    label: 'Анкер с полукольцом М8',      calcUnit: 'шт', def: 'Анкерный болт с полукольцом М8х40 (100 шт.)' },
+      { key: 'arm.dowel',     label: 'Дюбель-гвоздь для уголка',    calcUnit: 'шт', def: 'Дюбель-гвоздь SM-G 6x40 (3600/200шт.)' }
+    ] }
+  };
+  function roleDefs(calc) { return (ROLE_DEFS[calc] && ROLE_DEFS[calc].roles) || []; }
+  function roleDef(key) {
+    for (var c in ROLE_DEFS) { var a = ROLE_DEFS[c].roles; for (var i = 0; i < a.length; i++) if (a[i].key === key) return a[i]; }
+    return null;
+  }
+  function roleByLabel(calc, label) {
+    var a = roleDefs(calc), l = String(label || '').trim();
+    for (var i = 0; i < a.length; i++) if (a[i].def === l) return a[i].key;
+    return null;
+  }
+  // привязки: { 'arm.main3600': { code, name, unit, m2PerPiece } }
+  function rolesMap() {
+    var out = {};
+    catalogRaw().forEach(function (o) {
+      if (!isRoleCode(o.code)) return;
+      out[o.code.slice(5)] = { code: o.nomCode, name: o.name || '', unit: o.unit || '', m2PerPiece: o.m2PerPiece || 0 };
+    });
+    return out;
+  }
+  function rolesSave(map) { // map: ключ роли → {code,name,unit,m2PerPiece} | null
+    var roleItems = [];
+    Object.keys(map || {}).forEach(function (k) {
+      var b = map[k]; if (!b || !b.code) return;
+      roleItems.push({ code: 'role:' + k, nomCode: b.code, name: b.name, unit: b.unit, m2PerPiece: b.m2PerPiece });
+    });
+    return catalogSave(catalogAll(), roleItems);
+  }
+  // Перевод количества: шт → м² (по площади плиты), шт → м.п. (по длине штуки)
+  function unitKind(u) {
+    u = String(u || '').toLowerCase().replace(/\s+/g, '');
+    if (/^(м2|м²|кв\.?м|м\.?кв)/.test(u)) return 'm2';
+    if (/^(м\.?п|пог|мп|м\.?$|метр)/.test(u)) return 'mp';
+    if (/^шт/.test(u)) return 'pcs';
+    return u || 'pcs';
+  }
+  function convertQty(qty, fromUnit, toUnit, opt) {
+    opt = opt || {}; qty = num(qty, 0);
+    var a = unitKind(fromUnit), b = unitKind(toUnit);
+    if (a === b) return qty;
+    var r2 = function (v) { return Math.round(v * 100) / 100; };
+    if (a === 'pcs' && b === 'm2' && opt.m2PerPiece > 0) return r2(qty * opt.m2PerPiece);
+    if (a === 'pcs' && b === 'mp' && opt.lenM > 0) return r2(qty * opt.lenM);
+    if (a === 'm2' && b === 'pcs' && opt.m2PerPiece > 0) return Math.ceil(+(qty / opt.m2PerPiece).toFixed(6));
+    if (a === 'mp' && b === 'pcs' && opt.lenM > 0) return Math.ceil(+(qty / opt.lenM).toFixed(6));
+    return qty;
+  }
+  // m² одной штуки для позиции 1С: справочник → снимок привязки → по названию → из роли
+  function m2For(code, name, def, snap) {
+    var m2 = 0;
+    if (code && NOM_INDEX && NOM_INDEX.byId[code]) m2 = catalogResolve(code).m2PerPiece;
+    if (!m2 && snap) m2 = num(snap, 0);
+    if (!m2 && name) m2 = sizeM2(name);
+    if (!m2 && def && def.m2) m2 = def.m2;
+    return m2;
+  }
+  // Строка для журнала/i5 по роли: позиция 1С (если привязана) + пересчёт единиц
+  function roleRow(roleKey, qty, fallbackLabel, map) {
+    var def = roleDef(roleKey);
+    var b = (map || rolesMap())[roleKey];
+    var calcUnit = (def && def.calcUnit) || 'шт';
+    var row = { role: roleKey, calcQty: num(qty, 0), calcUnit: calcUnit, qtyReserve: 0, price: 0 };
+    if (b && b.code) {
+      row.label = b.name || fallbackLabel || (def && def.def) || '';
+      row.unit = b.unit || 'шт.';
+      row.nomId = b.code;
+      row.qtyCalc = convertQty(qty, calcUnit, row.unit, { m2PerPiece: m2For(b.code, b.name, def, b.m2PerPiece), lenM: def && def.lenM });
+    } else {
+      row.label = fallbackLabel || (def && def.def) || roleKey;
+      row.unit = 'шт.';
+      row.qtyCalc = num(qty, 0);
+    }
+    return row;
+  }
+
   var CJ = {
-    version: '1.5.0',
+    version: '1.6.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -884,7 +1001,9 @@
     catalog: catalogAll, catalogMap: catalogMap, catalogSave: catalogSave, catalogSync: catalogSync,
     catalogResolve: catalogResolve, catalogFind: catalogFind, catalogPackRound: catalogPackRound,
     nomLoad: nomLoad, nomLoadText: nomLoadText, nomIndex: nomIndex, nomPath: nomPath, nomUrl: nomUrl,
-    sizeM2: sizeM2
+    sizeM2: sizeM2,
+    ROLE_DEFS: ROLE_DEFS, roleDefs: roleDefs, roleDef: roleDef, roleByLabel: roleByLabel,
+    rolesMap: rolesMap, rolesSave: rolesSave, roleRow: roleRow, convertQty: convertQty, unitKind: unitKind, m2For: m2For
   };
 
   global.addEventListener('storage', function (e) {
