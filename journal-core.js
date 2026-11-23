@@ -1,5 +1,5 @@
 /* ============================================================
-   CUBICA · Ядро журнала (Универсальный адаптер v1.3 + справочник)
+   CUBICA · Ядро журнала (Универсальный адаптер v1.5 + справочник (номенклатура 1С))
    Подключается на: журнал, i5, калькуляторы
    ============================================================ */
 (function (global) {
@@ -21,7 +21,8 @@
       journal: 'https://6471811-source.github.io/Cubica-journal/',
       calc:    'https://6471811-source.github.io/k6.3/',
       i5:      'https://6471811-source.github.io/Cubica-i5/',
-      kp:      'https://6471811-source.github.io/cubica-kp/'
+      kp:      'https://6471811-source.github.io/cubica-kp/',
+      nomenclature: 'https://6471811-source.github.io/Cubica-nomenclature/nomenclature.xml'
     },
     numberFormat: { invoice: 'СЧ-{YYYY}-{NNNN}', kp: 'КП-{YYYY}-{NNNN}' }
   };
@@ -418,7 +419,7 @@
     var finalRows = (rec.rows || []).map(function (r) {
       return { 
         label: r.label, 
-        qty: (rec.type === 'cubica') ? rowQty(r) : num(r.qtyCalc), 
+        qty: rowQty(r), 
         unit: r.unit || 'шт.', 
         price: num(r.price) 
       };
@@ -626,67 +627,137 @@
   }
 
   /* ============================================================
-     СПРАВОЧНИК (плиты, светильники, профили, прочее)
-     Локально: localStorage 'cubica_catalog_v1'
-     Сервер:   GET/PUT {apiBase}/catalog (воркер v2)
+     СПРАВОЧНИК v2 = номенклатура 1С + наши настройки
+     Слой 1 (номенклатура): XML-выгрузка 1С, тот же файл и тот же кэш, что в i5.
+     Слой 2 (настройки):    по коду 1С — пачка, кратность, м² в шт., рек. цена (запас % — в i5).
+                            Локально 'cubica_catalog_v2', на сервере GET/PUT /catalog.
+     Настройки папки действуют на всё внутри, пока у позиции не задано своё.
      ============================================================ */
-  var K_CATALOG = 'cubica_catalog_v1';
-  var CATALOG_TYPES = [
-    { key: 'plate',   label: 'Плита' },
-    { key: 'light',   label: 'Светильник' },
-    { key: 'profile', label: 'Профиль' },
-    { key: 'other',   label: 'Прочее' }
-  ];
-  var CATALOG_SIZES = ['600x600', '1200x600'];
-  function sizeM2(size) {
-    var m = String(size || '').match(/(\d+)\s*[x×х]\s*(\d+)/i);
-    return m ? (Number(m[1]) * Number(m[2])) / 1e6 : 0;
+  var K_CATALOG = 'cubica_catalog_v2';
+  var K_NOM_CACHE = 'cubica_nomenclature_v2';
+  var NOM_URL_DEFAULT = 'https://6471811-source.github.io/Cubica-nomenclature/nomenclature.xml';
+  var CAT_FIELDS = ['packMultiple', 'packQty', 'packUnit', 'm2PerPiece', 'price', 'note']; // запас % задаётся в i5, не в справочнике
+  var NOM = null, NOM_INDEX = null, nomLoading = null;
+
+  function nomUrl() { var s = loadSettings(); return (s.urls && s.urls.nomenclature) || NOM_URL_DEFAULT; }
+
+  function parseNomenclatureXML(xmlText) {
+    var doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    var err = doc.querySelector('parsererror');
+    if (err) throw new Error('XML: ' + err.textContent.slice(0, 200));
+    var elements = doc.getElementsByTagName('Элемент');
+    var map = {}, parentOf = {}, order = [];
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      var id = el.getAttribute('Код');
+      var name = (el.getAttribute('Наименование') || '').replace(/\s+/g, ' ').trim();
+      if (!id || !name) continue;
+      var isFolder = el.getAttribute('ЭтоГруппа') === 'Да';
+      var node = { id: id, name: name, type: isFolder ? 'folder' : 'item' };
+      if (!isFolder) {
+        var unit = (el.getAttribute('Единица') || '').trim(); if (unit) node.unit = unit;
+        var art = (el.getAttribute('Артикул') || '').trim(); if (art) node.article = art;
+        var full = (el.getAttribute('ПолноеНаименование') || '').trim(); if (full) node.fullName = full;
+        var w = parseFloat(String(el.getAttribute('ВесБрутто') || '').replace(',', '.')); if (isFinite(w) && w > 0) node.weight = w;
+      } else node.children = [];
+      map[id] = node; parentOf[id] = el.getAttribute('РодительКод') || null; order.push(id);
+    }
+    var roots = [];
+    order.forEach(function (id) {
+      var p = parentOf[id], node = map[id];
+      if (p && map[p] && map[p].children) map[p].children.push(node); else roots.push(node);
+    });
+    var coll = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' });
+    (function sortTree(nodes) {
+      nodes.sort(function (a, b) { return a.type !== b.type ? (a.type === 'folder' ? -1 : 1) : coll.compare(a.name, b.name); });
+      nodes.forEach(function (n) { if (n.children) sortTree(n.children); });
+    })(roots);
+    return { version: '2.0', source: '1C XML', generated: nowISO(), tree: roots };
   }
-  function defaultCatalog() {
-    var t = nowISO();
-    var items = [
-      { type: 'plate',   name: 'Плита потолочная 600×600',  size: '600x600',  unit: 'м²', packMultiple: false, packQty: 0, packUnit: 'шт.' },
-      { type: 'plate',   name: 'Плита потолочная 1200×600', size: '1200x600', unit: 'м²', packMultiple: false, packQty: 0, packUnit: 'шт.' },
-      { type: 'light',   name: 'Светильник LED 600×600',    size: '600x600',  unit: 'шт.', power: 36 },
-      { type: 'profile', name: 'Т-профиль 24х33х3600', unit: 'шт.' },
-      { type: 'profile', name: 'Т-профиль 24х33х1200', unit: 'шт.' },
-      { type: 'profile', name: 'Т-профиль 24х33х600',  unit: 'шт.' },
-      { type: 'profile', name: 'Пристенный уголок 19х24х3000', unit: 'шт.' },
-      { type: 'other',   name: 'Подвес с крючком', unit: 'шт.' }
-    ];
-    return items.map(function (x, i) { return normalizeCatalogItem(Object.assign({ id: 'c' + (i + 1), active: true, isDefault: i <= 2 }, x)); });
+
+  function buildNomIndex(data) {
+    var byId = {}, parent = {}, items = [], folders = [];
+    (function walk(nodes, pid) {
+      nodes.forEach(function (n) {
+        byId[n.id] = n; parent[n.id] = pid;
+        if (n.type === 'folder' || (n.children && n.children.length)) { folders.push(n); walk(n.children || [], n.id); }
+        else items.push(n);
+      });
+    })((data && data.tree) || [], null);
+    return { byId: byId, parent: parent, items: items, folders: folders };
   }
-  function normalizeCatalogItem(x) {
+  function setNom(data) { NOM = data; NOM_INDEX = buildNomIndex(data); emit('nomenclature-changed', { count: NOM_INDEX.items.length }); return NOM; }
+
+  function nomFetch() {
+    return fetch(nomUrl(), { cache: 'no-cache' }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    }).then(function (text) {
+      var data = /^\s*</.test(text.replace(/^\uFEFF/, '')) ? parseNomenclatureXML(text.replace(/^\uFEFF/, '')) : JSON.parse(text);
+      if (!data || !Array.isArray(data.tree) || !data.tree.length) throw new Error('Выгрузка пустая');
+      data.loadedAt = nowISO();
+      try { localStorage.setItem(K_NOM_CACHE, JSON.stringify(data)); } catch (e) {}
+      return setNom(data);
+    });
+  }
+  // Номенклатура: сначала из кэша (мгновенно), затем обновление из файла в фоне
+  function nomLoad(force) {
+    if (NOM && !force) return Promise.resolve(NOM);
+    if (!force) {
+      try {
+        var raw = localStorage.getItem(K_NOM_CACHE);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.tree) && parsed.tree.length) {
+            setNom(parsed);
+            if (!nomLoading) nomLoading = nomFetch().catch(function () {}).then(function (r) { nomLoading = null; return r; });
+            return Promise.resolve(NOM);
+          }
+        }
+      } catch (e) {}
+    }
+    if (nomLoading && !force) return nomLoading;
+    nomLoading = nomFetch().then(function (r) { nomLoading = null; return r; }, function (e) { nomLoading = null; throw e; });
+    return nomLoading;
+  }
+  function nomLoadText(text) { // загрузка XML-файла вручную (без GitHub) — только в этом браузере
+    var data = parseNomenclatureXML(String(text).replace(/^\uFEFF/, ''));
+    data.loadedAt = nowISO(); data.source = '1C XML (файл)';
+    try { localStorage.setItem(K_NOM_CACHE, JSON.stringify(data)); } catch (e) {}
+    return setNom(data);
+  }
+  function nomIndex() { return NOM_INDEX; }
+  function nomPath(code) {
+    var out = []; if (!NOM_INDEX) return out;
+    var p = NOM_INDEX.parent[code];
+    while (p) { out.unshift(NOM_INDEX.byId[p]); p = NOM_INDEX.parent[p]; }
+    return out;
+  }
+
+  // ---- Слой настроек ----
+  function cleanSetting(x) {
     x = x || {};
-    var type = ['plate', 'light', 'profile', 'other'].indexOf(x.type) >= 0 ? x.type : 'other';
-    var size = (type === 'plate' || type === 'light') ? (CATALOG_SIZES.indexOf(x.size) >= 0 ? x.size : '600x600') : '';
-    return {
-      id: x.id || uid('c'),
-      type: type,
-      name: String(x.name || '').trim() || 'Новая позиция',
-      article: String(x.article || ''),
-      size: size,
-      m2PerPiece: type === 'plate' ? sizeM2(size) : 0,
-      unit: x.unit || (type === 'plate' ? 'м²' : 'шт.'),
-      packMultiple: !!x.packMultiple,
-      packQty: num(x.packQty, 0),
-      packUnit: x.packUnit === 'м²' ? 'м²' : 'шт.',
-      power: num(x.power, 0),
-      price: num(x.price, 0),
-      active: x.active !== false,
-      isDefault: !!x.isDefault,
-      note: String(x.note || '')
-    };
+    var o = { code: String(x.code || '') };
+    if (!o.code) return null;
+    if (x.folder) o.folder = true;
+    if (x.packMultiple === true || x.packMultiple === false) o.packMultiple = x.packMultiple;
+    if (x.packQty !== undefined && x.packQty !== null && x.packQty !== '' && num(x.packQty, 0) > 0) o.packQty = num(x.packQty, 0);
+    if (x.packUnit === 'шт' || x.packUnit === 'unit') o.packUnit = x.packUnit;
+    if (x.m2PerPiece !== undefined && x.m2PerPiece !== null && x.m2PerPiece !== '' && num(x.m2PerPiece, 0) > 0) o.m2PerPiece = num(x.m2PerPiece, 0);
+    if (x.price !== undefined && x.price !== null && x.price !== '' && num(x.price, 0) > 0) o.price = num(x.price, 0);
+    if (x.note) o.note = String(x.note);
+    return o;
   }
+  function settingIsEmpty(o) { return !o || CAT_FIELDS.every(function (f) { return o[f] === undefined; }); }
   function catalogMeta() {
     try { var raw = localStorage.getItem(K_CATALOG); if (raw) return JSON.parse(raw); } catch (e) {}
     return null;
   }
-  function catalogAll() {
+  function catalogAll() { // массив настроек (только заполненные)
     var m = catalogMeta();
-    if (m && Array.isArray(m.items)) return m.items.map(normalizeCatalogItem);
-    return defaultCatalog();
+    return (m && Array.isArray(m.items) ? m.items : []).map(cleanSetting).filter(function (o) { return o && !settingIsEmpty(o); });
   }
+  function catalogMap() { var map = {}; catalogAll().forEach(function (o) { map[o.code] = o; }); return map; }
   function catalogWriteLocal(items, meta) {
     var data = { version: num(meta && meta.version, 0), updatedAt: (meta && meta.updatedAt) || nowISO(), items: items };
     try { localStorage.setItem(K_CATALOG, JSON.stringify(data)); } catch (e) { emit('storage-error', {}); return false; }
@@ -694,11 +765,11 @@
     return true;
   }
   function catalogSave(items) {
-    items = (items || []).map(normalizeCatalogItem);
+    items = (items || []).map(cleanSetting).filter(function (o) { return o && !settingIsEmpty(o); });
     var prev = catalogMeta() || {};
     catalogWriteLocal(items, { version: prev.version, updatedAt: nowISO() });
-    if (!isApi()) return Promise.resolve({ ok: true, local: true });
-    return apiFetch('/catalog', { method: 'PUT', body: JSON.stringify({ items: items }) }).then(function (r) {
+    if (!isApi()) return Promise.resolve({ ok: true, local: true, count: items.length });
+    return apiFetch('/catalog', { method: 'PUT', body: JSON.stringify({ schema: 2, items: items }) }).then(function (r) {
       catalogWriteLocal(items, { version: r && r.version, updatedAt: r && r.updatedAt });
       return r;
     }).catch(function (e) { emit('sync-error', { catalog: true, error: e }); throw e; });
@@ -706,49 +777,89 @@
   function catalogSync() {
     if (!isApi()) return Promise.resolve(catalogAll());
     return apiFetch('/catalog').then(function (data) {
-      var items = data && Array.isArray(data.items) ? data.items : [];
+      // настройки v2 — только записи с кодом 1С (старый ручной список v1 игнорируем)
+      var items = (data && Array.isArray(data.items) ? data.items : []).filter(function (x) { return x && x.code; });
       if (!items.length) {
-        // на сервере пусто — отправляем туда то, что есть локально
         var local = catalogAll();
-        return catalogSave(local).then(function () { return local; });
+        if (local.length) return catalogSave(local).then(function () { return local; });
+        catalogWriteLocal([], data);
+        return [];
       }
-      items = items.map(normalizeCatalogItem);
+      items = items.map(cleanSetting).filter(Boolean);
       catalogWriteLocal(items, data);
       return items;
     });
   }
-  function catalogList(type, opts) {
-    opts = opts || {};
-    return catalogAll().filter(function (x) { return (!type || x.type === type) && (opts.all || x.active); });
+
+  function sizeM2(text) {
+    var m = String(text || '').match(/(\d{3,4})\s*[xх×*]\s*(\d{3,4})/i);
+    if (!m) return 0;
+    // плиты 595×595 / 1195×595 продаются как ячейка 600×600 / 1200×600
+    var snap = function (v) { v = Number(v); var r = Math.round(v / 600) * 600; return (r > 0 && Math.abs(v - r) <= 10) ? r : v; };
+    return +((snap(m[1]) * snap(m[2])) / 1e6).toFixed(4);
+  }
+  // Итоговые настройки позиции: своё → папка → папка выше … → авто
+  function catalogResolve(code, map) {
+    map = map || catalogMap();
+    var node = NOM_INDEX ? NOM_INDEX.byId[code] : null;
+    var eff = {}, from = {};
+    var chain = [code];
+    if (NOM_INDEX) { var p = NOM_INDEX.parent[code]; while (p) { chain.push(p); p = NOM_INDEX.parent[p]; } }
+    CAT_FIELDS.forEach(function (f) {
+      for (var i = 0; i < chain.length; i++) {
+        var o = map[chain[i]];
+        if (o && o[f] !== undefined) { eff[f] = o[f]; from[f] = i === 0 ? 'own' : chain[i]; break; }
+      }
+    });
+    if (eff.m2PerPiece === undefined && node) {
+      var auto = sizeM2(node.name);
+      if (auto) { eff.m2PerPiece = auto; from.m2PerPiece = 'auto'; }
+    }
+    // пачка из названия: «(18 шт.)», «6,48 кв.м./пач», «(11,52 м2)»
+    if (eff.packQty === undefined && node && node.type !== 'folder') {
+      var nm = node.name, unitIsM2 = /м2|м²/i.test(node.unit || '');
+      var mPcs = nm.match(/[(=]\s*(\d+)\s*шт/i);
+      var mM2 = nm.match(/(\d+(?:[.,]\d+)?)\s*(?:м2|м²|кв\.?\s*м|м\.?\s*кв)/i);
+      var sz = sizeM2(nm);
+      if (mM2 && sz && Math.abs(parseFloat(mM2[1].replace(',', '.')) - sz) < 1e-6) mM2 = null; // это не пачка, а площадь плиты
+      if (mM2 && unitIsM2) { eff.packQty = parseFloat(mM2[1].replace(',', '.')); if (eff.packUnit === undefined) { eff.packUnit = 'unit'; from.packUnit = 'auto'; } from.packQty = 'auto'; }
+      else if (mPcs) { eff.packQty = Number(mPcs[1]); if (eff.packUnit === undefined) { eff.packUnit = 'шт'; from.packUnit = 'auto'; } from.packQty = 'auto'; }
+      else if (mM2 && eff.m2PerPiece > 0) { eff.packQty = Math.round(parseFloat(mM2[1].replace(',', '.')) / eff.m2PerPiece); if (eff.packUnit === undefined) { eff.packUnit = 'шт'; from.packUnit = 'auto'; } from.packQty = 'auto'; }
+    }
+    if (eff.packUnit === undefined) eff.packUnit = 'unit';
+    return {
+      code: code, node: node, name: node ? node.name : '', unit: node ? (node.unit || '') : '',
+      article: node ? (node.article || '') : '', isFolder: !!(node && node.type === 'folder'),
+      packMultiple: eff.packMultiple === true, packQty: num(eff.packQty, 0), packUnit: eff.packUnit,
+      m2PerPiece: num(eff.m2PerPiece, 0),
+      price: num(eff.price, 0), note: eff.note || '', from: from, own: map[code] || null
+    };
   }
   function catalogFind(idOrName) {
+    if (!NOM_INDEX) return null;
+    if (NOM_INDEX.byId[idOrName]) return catalogResolve(idOrName);
     var s = String(idOrName || '').trim().toLowerCase();
-    var list = catalogAll();
-    for (var i = 0; i < list.length; i++) if (list[i].id === idOrName || list[i].name.toLowerCase() === s) return list[i];
+    if (!s) return null;
+    for (var i = 0; i < NOM_INDEX.items.length; i++) if (NOM_INDEX.items[i].name.toLowerCase() === s) return catalogResolve(NOM_INDEX.items[i].id);
     return null;
   }
-  // Пересчёт количества плит с учётом пачек.
-  // pieces — сколько плит нужно по раскладке. Возвращает, сколько отгружать.
-  function catalogPackRound(item, pieces) {
-    item = normalizeCatalogItem(item);
-    pieces = Math.max(0, Math.ceil(num(pieces, 0)));
-    var m2pp = item.m2PerPiece || sizeM2(item.size);
-    var res = { pieces: pieces, m2: +(pieces * m2pp).toFixed(4), packs: 0, shipPieces: pieces, shipM2: +(pieces * m2pp).toFixed(4), m2PerPiece: m2pp, rounded: false };
-    if (item.packMultiple && item.packQty > 0) {
-      var perPackPieces = item.packUnit === 'м²' ? (m2pp > 0 ? Math.round(item.packQty / m2pp) : 0) : item.packQty;
-      if (perPackPieces > 0) {
-        res.packs = Math.ceil(pieces / perPackPieces);
-        res.shipPieces = res.packs * perPackPieces;
-        res.shipM2 = +(res.shipPieces * m2pp).toFixed(4);
-        res.rounded = res.shipPieces !== pieces;
-        res.perPackPieces = perPackPieces;
-      }
-    }
+  // Округление до пачки. qty — количество в единице 1С этой позиции.
+  function catalogPackRound(eff, qty) {
+    qty = Math.max(0, num(qty, 0));
+    var res = { qty: qty, packs: 0, ship: qty, added: 0, perPack: 0, rounded: false };
+    if (!eff || !eff.packMultiple || !(eff.packQty > 0)) return res;
+    var perPack = eff.packQty;
+    if (eff.packUnit === 'шт' && eff.m2PerPiece > 0 && /м2|м²/i.test(eff.unit || '')) perPack = eff.packQty * eff.m2PerPiece; // пачка в штуках, позиция в м²
+    res.perPack = +perPack.toFixed(4);
+    res.packs = Math.ceil(+(qty / perPack).toFixed(6));
+    res.ship = +(res.packs * perPack).toFixed(4);
+    res.added = +(res.ship - qty).toFixed(4);
+    res.rounded = res.added > 0;
     return res;
   }
 
   var CJ = {
-    version: '1.3.0',
+    version: '1.5.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -770,10 +881,10 @@
     b64enc: b64enc, b64dec: b64dec,
     uid: uid, num: num, clone: clone, nowISO: nowISO,
     on: on,
-    CATALOG_TYPES: CATALOG_TYPES, CATALOG_SIZES: CATALOG_SIZES,
-    catalog: catalogAll, catalogList: catalogList, catalogFind: catalogFind,
-    catalogSave: catalogSave, catalogSync: catalogSync, catalogDefaults: defaultCatalog,
-    catalogNormalize: normalizeCatalogItem, catalogPackRound: catalogPackRound, sizeM2: sizeM2
+    catalog: catalogAll, catalogMap: catalogMap, catalogSave: catalogSave, catalogSync: catalogSync,
+    catalogResolve: catalogResolve, catalogFind: catalogFind, catalogPackRound: catalogPackRound,
+    nomLoad: nomLoad, nomLoadText: nomLoadText, nomIndex: nomIndex, nomPath: nomPath, nomUrl: nomUrl,
+    sizeM2: sizeM2
   };
 
   global.addEventListener('storage', function (e) {
