@@ -340,6 +340,13 @@
   }
 
   function rowQty(r) { return num(r.qtyCalc) + num(r.qtyReserve); }
+  // Округление количества как в i5: тыс.шт — до тысячных, шт — до целого, остальное — до сотых
+  function qtyRound(v, unit) {
+    var n = +num(v, 0).toFixed(6), u = String(unit || '').trim().toLowerCase();
+    if (/^шт/.test(u)) return Math.ceil(n);
+    var k = /^тыс/.test(u) ? 1000 : 100;
+    return Math.round(n * k) / k;
+  }
   function rowSum(r) { return rowQty(r) * num(r.price); }
   function computeTotals(rows, vatRate) {
     var rate = typeof vatRate === 'number' ? vatRate : loadSettings().vatRate;
@@ -419,7 +426,7 @@
     var finalRows = (rec.rows || []).map(function (r) {
       return { 
         label: r.label, 
-        qty: rowQty(r), 
+        qty: qtyRound(rowQty(r), r.unit), 
         unit: r.unit || 'шт.', 
         price: num(r.price),
         role: r.role || undefined
@@ -1015,7 +1022,7 @@
   }
 
   var CJ = {
-    version: '1.7.0',
+    version: '1.7.1',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -1027,7 +1034,7 @@
     duplicate: duplicate, duplicateReserved: duplicateReserved,
     create: emptyRecord, fromCalcPayload: fromCalcPayload,
     nextNumber: nextNumber, formatNumber: formatNumber, parseSeq: parseSeq,
-    rowQty: rowQty, rowSum: rowSum, computeTotals: computeTotals,
+    rowQty: rowQty, qtyRound: qtyRound, rowSum: rowSum, computeTotals: computeTotals,
     buildClientPayload: buildClientPayload, sendKpToClient: sendKpToClient, fetchOpens: fetchOpens,
     i5UrlForRecord: i5UrlForRecord, calcUrlForRecord: calcUrlForRecord, kpUrlForToken: kpUrlForToken,
     withParam: withParam,
