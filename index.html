@@ -138,6 +138,31 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 .cat-table input::placeholder{color:#b0b6bf;font-style:italic}
 .cat-table .path{display:block;font-size:10.5px;color:#a0a8b0;font-weight:500;overflow:hidden;text-overflow:ellipsis}
 .cat-table .hint{font-size:10.5px;color:#9aa1ac;padding-left:4px;white-space:nowrap}
+.roles-table td{vertical-align:middle}
+.roles-table td.rl b{display:block;font-size:13px}
+.roles-table td.rl small{display:block;color:#a0a8b0;font-size:10.5px;margin-top:2px}
+.roles-table td.nm1{white-space:normal}
+.roles-table td.nm1 .code{color:#9aa1ac;font-size:11px;margin-left:6px}
+.roles-table td.nm1 .none{color:#b26a00;font-weight:700;font-size:12px}
+.roles-table td.cv{font-size:11.5px;color:#2e7d32}
+.roles-table td.cv.warn{color:#b26a00}
+.roles-table .rbtn{padding:6px 10px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid #ddd;background:#fff;cursor:pointer;font-family:inherit;margin-right:4px}
+.roles-table .rbtn:hover{border-color:#c00000;color:#c00000}
+.role-tag{display:inline-block;font-size:10px;font-weight:800;color:#1565c0;background:#e8f0fe;border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.rp-box{background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);margin-top:30px;max-width:860px;width:96vw;padding:0;display:flex;flex-direction:column;max-height:88vh}
+.rp-head{padding:18px 22px 12px;border-bottom:1px solid #ececec}
+.rp-head h3{margin:0 0 10px;font-size:17px}
+.rp-head input{width:100%;padding:11px 14px;border:1.5px solid #ccc;border-radius:9px;font-size:14px;font-family:inherit}
+.rp-head input:focus{outline:none;border-color:#c00000}
+.rp-hint{font-size:11.5px;color:#8a8a8a;margin-top:6px}
+.rp-list{flex:1;overflow-y:auto;padding:8px 12px;min-height:280px}
+.rp-item{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:center;border:1px solid transparent}
+.rp-item:hover{background:#fff5f5;border-color:#f0c0c0}
+.rp-item .n{flex:1;font-size:13px;font-weight:600}
+.rp-item .n small{display:block;font-weight:500;color:#a0a8b0;font-size:10.5px}
+.rp-item .b{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:#f1f3f5;color:#5a6b7a;white-space:nowrap}
+.rp-item .b.on{background:#e8f5e9;color:#2e7d32}
+.rp-foot{padding:12px 22px;border-top:1px solid #ececec;text-align:right}
 .cat-clr{width:24px;height:24px;border-radius:6px;border:1px solid #e6e6e6;background:#fff;color:#9aa1ac;cursor:pointer;font-size:11px;padding:0}
 .cat-clr:hover{border-color:#c00000;color:#c00000}
 .cat-help{font-size:12px;color:#7a8a99;line-height:1.6;margin-top:10px;padding:12px 14px;background:#fff;border:1px solid #ececec;border-radius:10px}
@@ -237,6 +262,39 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
 <!-- ===================== СПРАВОЧНИК ===================== -->
 <div id="tabCatalog" hidden>
   <div class="toolbar">
+    <div class="seg" id="catMode">
+      <button type="button" data-mode="nom" class="on">📚 Номенклатура</button>
+      <button type="button" data-mode="roles">🧩 Роли Армстронга</button>
+    </div>
+  </div>
+  <div id="rolesPanel" hidden>
+    <div class="cat-info" id="rolesInfo"></div>
+    <section class="tablewrap">
+      <table class="cat-table roles-table">
+        <thead>
+          <tr>
+            <th style="width:230px">Роль в калькуляторе</th>
+            <th>Позиция 1С</th>
+            <th style="width:58px">Ед.</th>
+            <th style="width:170px">Пересчёт</th>
+            <th style="width:130px">Пачка</th>
+            <th style="width:90px;text-align:right">Рек. цена</th>
+            <th style="width:150px"></th>
+          </tr>
+        </thead>
+        <tbody id="rolesBody"></tbody>
+      </table>
+    </section>
+    <div class="cat-help">
+      <b>Роли Армстронга.</b> Калькулятор считает количество по ролям (плиты, профили, крепёж — в штуках). Здесь вы указываете, какая позиция 1С стоит за каждой ролью:
+      калькулятор покажет её название, а в счёт (i5) строка придёт сразу с кодом 1С, единицей, пачкой и рекомендованной ценой.
+      Если единица в 1С другая, количество пересчитается: плиты шт → м² по площади плиты, профили и уголок шт → м.п. по длине.
+      В счёте позицию можно заменить через 📁 — это меняет только этот счёт. Непривязанная роль уйдёт в счёт со старым названием и пометкой «не привязано к 1С».
+      Привязки сохраняются сразу (на сервере — общие для всех).
+    </div>
+  </div>
+  <div id="nomPanel">
+  <div class="toolbar">
     <div class="seg" id="catView">
       <button type="button" data-view="tree" class="on">🗂 По папкам</button>
       <button type="button" data-view="list">☰ Списком</button>
@@ -290,6 +348,22 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     ✕ в строке убирает собственные настройки позиции (останутся унаследованные).
     Настройки привязаны к коду 1С, поэтому новая выгрузка их не стирает.
     <span id="catWhere"></span>
+  </div>
+  </div>
+</div>
+
+<!-- Выбор позиции 1С для роли -->
+<div class="modal" id="rolePickModal">
+  <div class="modal-box rp-box">
+    <div class="rp-head">
+      <h3 id="rpTitle">Позиция для роли</h3>
+      <input type="text" id="rpSearch" placeholder="🔍 Название, код или артикул — несколько слов через пробел" autocomplete="off">
+      <div class="rp-hint" id="rpHint"></div>
+    </div>
+    <div class="rp-list" id="rpList"></div>
+    <div class="rp-foot">
+      <button type="button" class="btn" id="rpCancel">Отмена</button>
+    </div>
   </div>
 </div>
 </div>
@@ -1426,8 +1500,9 @@ $('mStatus').addEventListener('change', function () {
       nm = '<span class="ind" style="width:' + (depth * 16) + 'px"></span><span class="arr">▶</span>📁 ' + esc(n.name) +
         '<span class="fcnt">' + cnt + '</span>' + (!catEmptySet(own) ? '<span class="ftag">для всей папки</span>' : '');
     } else {
-      nm = '<span class="ind" style="width:' + (depth * 16 + 18) + 'px"></span>' + esc(n.name);
-      if (opt.path) nm = esc(n.name) + '<span class="path">' + esc(opt.path) + '</span>';
+      var rtag = roleTagsFor(n.id);
+      nm = '<span class="ind" style="width:' + (depth * 16 + 18) + 'px"></span>' + esc(n.name) + rtag;
+      if (opt.path) nm = esc(n.name) + rtag + '<span class="path">' + esc(opt.path) + '</span>';
     }
     // м² в шт.
     var m2ph = inh('m2PerPiece') !== undefined ? fmtN(inh('m2PerPiece'), 4) + (e.from.m2PerPiece === 'auto' ? ' авто' : '') : '';
@@ -1580,12 +1655,128 @@ $('mStatus').addEventListener('change', function () {
     var p2 = CJ.isApi() ? CJ.catalogSync() : Promise.resolve();
     Promise.all([p1.catch(function (e) { return { err: e }; }), p2.catch(function (e) { return { err: e }; })]).then(function (r) {
       _cntCache = {};
-      catLoadFromCore(); fillCatDatalist();
+      catLoadFromCore(); fillCatDatalist(); _rolesByCode = null; if (catMode === 'roles') renderRoles();
       if (r[0] && r[0].err) notify('Выгрузка 1С не загрузилась: ' + r[0].err.message, true);
       else if (r[1] && r[1].err) notify('Сервер недоступен: ' + r[1].err.message, true);
       else notify('Справочник обновлён');
     });
   }
+  /* ---------- Роли Армстронга ---------- */
+  var catMode = 'nom', rpRole = null, _rolesByCode = null;
+  function coreHasRoles() { return typeof CJ.rolesMap === 'function' && typeof CJ.roleDefs === 'function'; }
+  function rolesByCode() {
+    if (_rolesByCode) return _rolesByCode;
+    _rolesByCode = {};
+    if (!coreHasRoles()) return _rolesByCode;
+    var m = CJ.rolesMap();
+    CJ.roleDefs('armstrong').forEach(function (d) { var b = m[d.key]; if (b && b.code) (_rolesByCode[b.code] = _rolesByCode[b.code] || []).push(d.label); });
+    return _rolesByCode;
+  }
+  function roleTagsFor(code) {
+    var a = rolesByCode()[code]; if (!a) return '';
+    return a.map(function (l) { return '<span class="role-tag" title="Роль калькулятора Армстронга">Армстронг: ' + esc(l) + '</span>'; }).join('');
+  }
+  function packText(e) {
+    if (!e || !(e.packQty > 0)) return '';
+    var u = e.packUnit === 'шт' ? 'шт' : (e.unit || 'ед.');
+    return (e.packMultiple ? '▣ ' : '') + fmtN(e.packQty, 3) + ' ' + u;
+  }
+  function renderRoles() {
+    if (!coreHasRoles()) { $('rolesBody').innerHTML = ''; $('rolesInfo').textContent = 'Загружена старая версия journal-core.js — обновите файл и нажмите Ctrl+F5.'; return; }
+    var m = CJ.rolesMap(), idx = CJ.nomIndex(), defs = CJ.roleDefs('armstrong');
+    var linked = defs.filter(function (d) { return m[d.key] && m[d.key].code; }).length;
+    $('rolesInfo').innerHTML = 'Привязано ролей: <b>' + linked + '</b> из <b>' + defs.length + '</b>' + (CJ.isApi() ? ' · хранится на сервере, общее для всех' : ' · сейчас только в этом браузере (включите серверный режим для общего доступа)');
+    $('rolesBody').innerHTML = defs.map(function (d) {
+      var b = m[d.key];
+      var cells;
+      if (b && b.code) {
+        var node = idx && idx.byId[b.code];
+        var e = node ? CJ.catalogResolve(b.code, catWork) : null;
+        var unit = (node && node.unit) || b.unit || '';
+        var cv = '', warn = false, k = CJ.unitKind(unit);
+        if (k === 'pcs') cv = 'шт → шт';
+        else if (k === 'm2') { var m2 = CJ.m2For(b.code, (node && node.name) || b.name, d, b.m2PerPiece); cv = m2 > 0 ? '1 шт = ' + fmtN(m2, 4) + ' м²' : 'не задана площадь плиты'; warn = !(m2 > 0); }
+        else if (k === 'mp') { cv = d.lenM ? '1 шт = ' + fmtN(d.lenM, 2) + ' м.п.' : 'нет длины — без пересчёта'; warn = !d.lenM; }
+        else { cv = 'шт → ' + unit + ': без пересчёта'; warn = true; }
+        cells = '<td class="nm1">' + esc((node && node.name) || b.name) + '<span class="code">' + esc(b.code) + '</span>' + (idx && !node ? '<div class="none">⚠ этого кода больше нет в выгрузке 1С</div>' : '') + '</td>' +
+          '<td class="u">' + esc(unit) + '</td>' +
+          '<td class="cv' + (warn ? ' warn' : '') + '">' + esc(cv) + '</td>' +
+          '<td class="u">' + esc(packText(e)) + '</td>' +
+          '<td class="ro">' + (e && e.price > 0 ? fmtN(e.price, 2) : '') + '</td>';
+      } else {
+        cells = '<td class="nm1"><span class="none">не привязано</span> <span class="code">в счёт уйдёт как «' + esc(d.def) + '»</span></td><td></td><td></td><td></td><td></td>';
+      }
+      return '<tr data-role="' + esc(d.key) + '"><td class="rl"><b>' + esc(d.label) + '</b><small>' + esc(d.def) + '</small></td>' + cells +
+        '<td><button type="button" class="rbtn" data-rpick="1">📁 ' + (b && b.code ? 'Заменить' : 'Выбрать') + '</button>' + (b && b.code ? '<button type="button" class="rbtn" data-rclr="1" title="Отвязать">✕</button>' : '') + '</td></tr>';
+    }).join('');
+  }
+  function rolesSet(key, binding) {
+    var m = CJ.rolesMap();
+    if (binding) m[key] = binding; else delete m[key];
+    _rolesByCode = null;
+    CJ.rolesSave(m).then(function (r) {
+      renderRoles();
+      notify(r && r.local ? '✓ Роль сохранена в этом браузере' : '✓ Роль сохранена на сервере');
+    }).catch(function (e) { renderRoles(); notify('Сохранено локально, на сервер не ушло: ' + (e && e.message || e), true); });
+  }
+  function openRolePick(key) {
+    var d = CJ.roleDef(key); rpRole = key;
+    $('rpTitle').textContent = 'Позиция 1С для роли «' + d.label + '»';
+    $('rpHint').textContent = 'Калькулятор сейчас пишет: «' + d.def + '». Клик по позиции — привязать.';
+    $('rpSearch').value = '';
+    renderRolePick();
+    $('rolePickModal').classList.add('open');
+    setTimeout(function () { $('rpSearch').focus(); }, 50);
+  }
+  function renderRolePick() {
+    var idx = CJ.nomIndex();
+    if (!idx) { $('rpList').innerHTML = '<div class="empty">Номенклатура не загружена — нажмите «⟳ Обновить из 1С» на вкладке «Номенклатура».</div>'; return; }
+    var words = $('rpSearch').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) { $('rpList').innerHTML = '<div class="empty">Начните вводить название — например «3600», «уголок», «Budmaster».</div>'; return; }
+    var res = [];
+    for (var i = 0; i < idx.items.length && res.length < 150; i++) {
+      var n = idx.items[i], hay = (n.name + ' ' + n.id + ' ' + (n.article || '')).toLowerCase();
+      if (words.every(function (w) { return hay.indexOf(w) >= 0; })) res.push(n);
+    }
+    $('rpList').innerHTML = res.length ? res.map(function (n) {
+      var e = CJ.catalogResolve(n.id, catWork);
+      var path = CJ.nomPath(n.id).map(function (f) { return f.name; }).join(' › ');
+      return '<div class="rp-item" data-code="' + esc(n.id) + '"><div class="n">' + esc(n.name) + '<small>' + esc(path) + ' · ' + esc(n.id) + '</small></div>' +
+        (packText(e) ? '<span class="b' + (e.packMultiple ? ' on' : '') + '">пачка ' + esc(packText(e).replace('▣ ', '')) + '</span>' : '') +
+        (e.price > 0 ? '<span class="b">' + fmtN(e.price, 2) + '</span>' : '') +
+        '<span class="b">' + esc(n.unit || '—') + '</span></div>';
+    }).join('') + (res.length >= 150 ? '<div class="empty">Показаны первые 150 — уточните поиск.</div>' : '') : '<div class="empty">Ничего не найдено.</div>';
+  }
+  function setCatMode(mode) {
+    catMode = mode;
+    $('catMode').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-mode') === mode); });
+    $('rolesPanel').hidden = mode !== 'roles';
+    $('nomPanel').hidden = mode === 'roles';
+    if (mode === 'roles') renderRoles(); else { _rolesByCode = null; renderCatalog(); }
+  }
+  function bindRoles() {
+    $('catMode').addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setCatMode(b.getAttribute('data-mode')); });
+    $('rolesBody').addEventListener('click', function (e) {
+      var tr = e.target.closest('tr[data-role]'); if (!tr) return;
+      var key = tr.getAttribute('data-role');
+      if (e.target.closest('[data-rpick]')) openRolePick(key);
+      else if (e.target.closest('[data-rclr]') && confirm('Отвязать позицию 1С от роли?')) rolesSet(key, null);
+    });
+    var t = null;
+    $('rpSearch').addEventListener('input', function () { clearTimeout(t); t = setTimeout(renderRolePick, 150); });
+    $('rpList').addEventListener('click', function (e) {
+      var it = e.target.closest('.rp-item'); if (!it || !rpRole) return;
+      var code = it.getAttribute('data-code'), n = CJ.nomIndex().byId[code];
+      var eff = CJ.catalogResolve(code, catWork);
+      rolesSet(rpRole, { code: code, name: n.name, unit: n.unit || '', m2PerPiece: eff.m2PerPiece || 0 });
+      $('rolePickModal').classList.remove('open'); rpRole = null;
+    });
+    $('rpCancel').addEventListener('click', function () { $('rolePickModal').classList.remove('open'); rpRole = null; });
+    $('rolePickModal').addEventListener('click', function (e) { if (e.target === $('rolePickModal')) { $('rolePickModal').classList.remove('open'); rpRole = null; } });
+    CJ.on('catalog-changed', function () { _rolesByCode = null; if (catMode === 'roles' && !$('tabCatalog').hidden) renderRoles(); });
+    CJ.on('nomenclature-changed', function () { if (catMode === 'roles' && !$('tabCatalog').hidden) renderRoles(); });
+  }
+
   function showTab(name) {
     if (name === 'catalog' && !coreHasCatalog()) {
       notify('Загружена старая версия journal-core.js — обновите файл в репозитории Cubica-journal и нажмите Ctrl+F5', true);
@@ -1603,7 +1794,7 @@ $('mStatus').addEventListener('change', function () {
       if (!catLoaded) {
         catWork = CJ.catalogMap(); catBase = catSnapshot(); catLoaded = true;
         $('catInfo').textContent = 'Загружаю выгрузку 1С…';
-        CJ.nomLoad().then(function () { _cntCache = {}; renderCatalog(); fillCatDatalist(); })
+        CJ.nomLoad().then(function () { _cntCache = {}; renderCatalog(); fillCatDatalist(); if (catMode === 'roles') renderRoles(); })
           .catch(function (e) { renderCatalog(); notify('Выгрузка 1С не загрузилась: ' + e.message, true); });
         renderCatalog();
       } else renderCatalog();
@@ -1611,6 +1802,7 @@ $('mStatus').addEventListener('change', function () {
     try { history.replaceState(null, '', name === 'catalog' ? '#catalog' : location.pathname + location.search); } catch (e) {}
   }
   function bindCatalog() {
+    bindRoles();
     document.querySelectorAll('.tab').forEach(function (b) {
       b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); });
     });
