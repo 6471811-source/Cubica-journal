@@ -442,6 +442,7 @@
     return {
       v: 6, 
       type: rec.type || 'cubica', // <--- ПЕРЕДАЕМ ТИП В I5
+      brand: (rec.brand === 'armstrong' || rec.brand === 'cubica') ? rec.brand : undefined, // логотип КП/счёта (выбор в i5)
       rooms: rooms, 
       i5_url: s.urls.i5,
       paid: rec.status === 'paid',
@@ -1093,7 +1094,7 @@
   }
 
   var CJ = {
-    version: '1.8.0',
+    version: '1.8.1',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
