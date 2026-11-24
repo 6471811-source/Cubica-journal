@@ -502,6 +502,10 @@
   function calcUrlForRecord(rec) {
     var s = loadSettings();
     // Если запись из Армстронга, ведем в его калькулятор
+    if (rec && rec.type === 'grilyato') {
+      var grUrl = (s.urls && s.urls.grilyato) || 'https://6471811-source.github.io/Cubica-grilyato/';
+      return withParam(grUrl, 'jid', rec.id);
+    }
     if (rec && rec.type === 'armstrong') {
       // Берем базовый URL из настроек (по умолчанию это URL Кубота)
       // Но подменяем его на URL Армстронга
@@ -930,15 +934,82 @@
       { key: 'arm.dowel',     label: 'Дюбель-гвоздь для уголка',    calcUnit: 'шт', def: 'Дюбель-гвоздь SM-G 6x40 (3600/200шт.)' }
     ] }
   };
-  function roleDefs(calc) { return (ROLE_DEFS[calc] && ROLE_DEFS[calc].roles) || []; }
-  function roleDef(key) {
-    for (var c in ROLE_DEFS) { var a = ROLE_DEFS[c].roles; for (var i = 0; i < a.length; i++) if (a[i].key === key) return a[i]; }
-    return null;
+  // ---- Грильято: роли собираются из системы × ячейки × цвета ----
+  // GL15: мама, папа, L-планка (по ячейке и цвету) + Т-профили 15 мм 3600/1200/600 (по цвету).
+  // Классический 27 / 40 мм: мама, папа (по ячейке и цвету) + направляющие 2400/1200/600 (по цвету) + соединитель.
+  // Уголок — по цвету. Подвесы, анкеры и дюбели — общие с Армстронгом (роли arm.*).
+  var GR_CELLS = [50, 75, 100, 120, 150, 200];
+  var GR_COLORS = [
+    { key: '9003', name: 'RAL 9003 белый' },
+    { key: '7004', name: 'RAL 7004 серый' },
+    { key: '9005', name: 'RAL 9005 чёрный' },
+    { key: 'ral',  name: 'RAL под заказ' }
+  ];
+  var GR_HEIGHTS = [27, 40];
+  function grPerGrid(cell) { cell = Number(cell) || 100; return Math.max(1, Math.round(600 / cell) - 1); } // мам (и пап) в решётке 600×600
+  function buildGrilyatoRoles() {
+    var out = [];
+    GR_CELLS.forEach(function (c) {
+      GR_COLORS.forEach(function (col) {
+        var cs = c + '×' + c, cn = c + 'х' + c;
+        out.push({ key: 'gr.gl.mama.' + c + '.' + col.key, grp: 'gl15', cell: c, color: col.key, calcUnit: 'шт', lenM: 0.6,
+          label: 'GL15 · «мама» · ' + cs + ' · ' + col.name, def: 'Грильято GL15 «мама» 600 мм, ячейка ' + cn + ', ' + col.name });
+        out.push({ key: 'gr.gl.papa.' + c + '.' + col.key, grp: 'gl15', cell: c, color: col.key, calcUnit: 'шт', lenM: 0.6,
+          label: 'GL15 · «папа» · ' + cs + ' · ' + col.name, def: 'Грильято GL15 «папа» 600 мм, ячейка ' + cn + ', ' + col.name });
+        out.push({ key: 'gr.gl.l.' + c + '.' + col.key, grp: 'gl15', cell: c, color: col.key, calcUnit: 'шт', lenM: 0.6,
+          label: 'GL15 · L-планка · ' + cs + ' · ' + col.name, def: 'Грильято GL15 L-планка 600 мм, ячейка ' + cn + ', ' + col.name });
+      });
+    });
+    GR_COLORS.forEach(function (col) {
+      out.push({ key: 'gr.gl.main.' + col.key, grp: 'gl15', color: col.key, calcUnit: 'шт', lenM: 3.6,
+        label: 'GL15 · Т-профиль несущий 3600 · ' + col.name, def: 'Т-профиль 15 мм несущий 3600 GL15, ' + col.name });
+      out.push({ key: 'gr.gl.c1200.' + col.key, grp: 'gl15', color: col.key, calcUnit: 'шт', lenM: 1.2,
+        label: 'GL15 · Т-профиль поперечный 1200 · ' + col.name, def: 'Т-профиль 15 мм поперечный 1200 GL15, ' + col.name });
+      out.push({ key: 'gr.gl.c600.' + col.key, grp: 'gl15', color: col.key, calcUnit: 'шт', lenM: 0.6,
+        label: 'GL15 · Т-профиль поперечный 600 · ' + col.name, def: 'Т-профиль 15 мм поперечный 600 GL15, ' + col.name });
+    });
+    GR_HEIGHTS.forEach(function (h) {
+      var g = 'cl' + h;
+      GR_CELLS.forEach(function (c) {
+        GR_COLORS.forEach(function (col) {
+          var cs = c + '×' + c, cn = c + 'х' + c;
+          out.push({ key: 'gr.' + g + '.mama.' + c + '.' + col.key, grp: g, cell: c, color: col.key, calcUnit: 'шт', lenM: 0.6,
+            label: 'Классика ' + h + ' · «мама» · ' + cs + ' · ' + col.name, def: 'Грильято классический ' + h + ' мм «мама» 600 мм, ячейка ' + cn + ', ' + col.name });
+          out.push({ key: 'gr.' + g + '.papa.' + c + '.' + col.key, grp: g, cell: c, color: col.key, calcUnit: 'шт', lenM: 0.6,
+            label: 'Классика ' + h + ' · «папа» · ' + cs + ' · ' + col.name, def: 'Грильято классический ' + h + ' мм «папа» 600 мм, ячейка ' + cn + ', ' + col.name });
+        });
+      });
+      GR_COLORS.forEach(function (col) {
+        out.push({ key: 'gr.' + g + '.g2400.' + col.key, grp: g, color: col.key, calcUnit: 'шт', lenM: 2.4,
+          label: 'Классика ' + h + ' · направляющая 2400 · ' + col.name, def: 'Грильято классический ' + h + ' мм направляющая 2400, ' + col.name });
+        out.push({ key: 'gr.' + g + '.g1200.' + col.key, grp: g, color: col.key, calcUnit: 'шт', lenM: 1.2,
+          label: 'Классика ' + h + ' · направляющая 1200 · ' + col.name, def: 'Грильято классический ' + h + ' мм направляющая 1200, ' + col.name });
+        out.push({ key: 'gr.' + g + '.g600.' + col.key, grp: g, color: col.key, calcUnit: 'шт', lenM: 0.6,
+          label: 'Классика ' + h + ' · направляющая 600 · ' + col.name, def: 'Грильято классический ' + h + ' мм направляющая 600, ' + col.name });
+      });
+    });
+    out.push({ key: 'gr.conn', grp: 'common', calcUnit: 'шт', label: 'Классика · соединитель направляющих', def: 'Соединитель направляющей грильято' });
+    GR_COLORS.forEach(function (col) {
+      out.push({ key: 'gr.angle.' + col.key, grp: 'common', color: col.key, calcUnit: 'шт', lenM: 3,
+        label: 'Уголок пристенный 3 м · ' + col.name, def: 'Уголок пристенный 19х19 (3 м), ' + col.name });
+    });
+    return out;
   }
+  ROLE_DEFS.grilyato = { title: 'Грильято', roles: buildGrilyatoRoles(), shared: 'armstrong' };
+
+  function roleDefs(calc) { return (ROLE_DEFS[calc] && ROLE_DEFS[calc].roles) || []; }
+  var _roleKeyIdx = null;
+  function roleDef(key) {
+    if (!_roleKeyIdx) { _roleKeyIdx = {}; for (var c in ROLE_DEFS) ROLE_DEFS[c].roles.forEach(function (d) { _roleKeyIdx[d.key] = d; }); }
+    return _roleKeyIdx[key] || null;
+  }
+  var _roleLabelIdx = {};
   function roleByLabel(calc, label) {
-    var a = roleDefs(calc), l = String(label || '').trim();
-    for (var i = 0; i < a.length; i++) if (a[i].def === l) return a[i].key;
-    return null;
+    var l = String(label || '').trim();
+    if (!_roleLabelIdx[calc]) { var ix = {}; roleDefs(calc).forEach(function (d) { ix[d.def] = d.key; }); _roleLabelIdx[calc] = ix; }
+    if (_roleLabelIdx[calc][l]) return _roleLabelIdx[calc][l];
+    var sh = ROLE_DEFS[calc] && ROLE_DEFS[calc].shared; // общие роли (подвесы, крепёж) — у Армстронга
+    return sh ? roleByLabel(sh, l) : null;
   }
   // привязки: { 'arm.main3600': { code, name, unit, m2PerPiece } }
   function rolesMap() {
@@ -1022,7 +1093,7 @@
   }
 
   var CJ = {
-    version: '1.7.1',
+    version: '1.8.0',
     COMPANY: COMPANY,
     STATUSES: STATUSES,
     DEFAULTS: DEFAULTS,
@@ -1049,6 +1120,7 @@
     nomLoad: nomLoad, nomLoadText: nomLoadText, nomIndex: nomIndex, nomPath: nomPath, nomUrl: nomUrl,
     sizeM2: sizeM2,
     ROLE_DEFS: ROLE_DEFS, roleDefs: roleDefs, roleDef: roleDef, roleByLabel: roleByLabel,
+    GR: { cells: GR_CELLS, colors: GR_COLORS, heights: GR_HEIGHTS, perGrid: grPerGrid },
     rolesMap: rolesMap, rolesSave: rolesSave, roleRow: roleRow, convertQty: convertQty, unitKind: unitKind, m2For: m2For, pcsFor: pcsFor, unitOpt: unitOpt, autoPcsPerUnit: autoPcsPerUnit
   };
 
