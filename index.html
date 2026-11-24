@@ -190,6 +190,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
     <button type="button" class="btn primary" id="btnNewInvoice">＋ Новый счёт</button>
     <button type="button" class="btn green" id="btnNewKp">🧮 Калькулятор Кубота</button>
     <button type="button" class="btn green" id="btnNewArmstrong">🧱 Калькулятор Армстронга</button>
+    <button type="button" class="btn green" id="btnNewGrilyato">▦ Калькулятор Грильято</button>
     <span class="spacer"></span>
     <button type="button" class="btn" id="btnExport">⬇ Экспорт JSON</button>
     <button type="button" class="btn" id="btnImport">⬆ Импорт JSON</button>
@@ -265,10 +266,22 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   <div class="toolbar">
     <div class="seg" id="catMode">
       <button type="button" data-mode="nom" class="on">📚 Номенклатура</button>
-      <button type="button" data-mode="roles">🧩 Роли Армстронга</button>
+      <button type="button" data-mode="roles">🧩 Роли калькуляторов</button>
     </div>
   </div>
   <div id="rolesPanel" hidden>
+    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+      <div class="seg" id="rolesCalc">
+        <button type="button" data-calc="armstrong" class="on">🧱 Армстронг</button>
+        <button type="button" data-calc="grilyato">▦ Грильято</button>
+      </div>
+      <span id="grFilters" hidden style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="grfSys"><option value="">Все системы</option><option value="gl15">GL15</option><option value="cl27">Классика 27 мм</option><option value="cl40">Классика 40 мм</option><option value="common">Общие (соединитель, уголок)</option></select>
+        <select id="grfCell"><option value="">Все ячейки</option><option value="50">50×50</option><option value="75">75×75</option><option value="100">100×100</option><option value="120">120×120</option><option value="150">150×150</option><option value="200">200×200</option><option value="-">Без ячейки (профили)</option></select>
+        <select id="grfColor"><option value="">Все цвета</option><option value="9003">RAL 9003</option><option value="7004">RAL 7004</option><option value="9005">RAL 9005</option><option value="ral">RAL под заказ</option></select>
+        <label style="font-size:12px;display:inline-flex;gap:4px;align-items:center"><input type="checkbox" id="grfFree"> только непривязанные</label>
+      </span>
+    </div>
     <div class="cat-info" id="rolesInfo"></div>
     <section class="tablewrap">
       <table class="cat-table roles-table">
@@ -287,7 +300,7 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
       </table>
     </section>
     <div class="cat-help">
-      <b>Роли Армстронга.</b> Калькулятор считает количество по ролям (плиты, профили, крепёж — в штуках). Здесь вы указываете, какая позиция 1С стоит за каждой ролью:
+      <b>Роли калькуляторов.</b> Грильято: подвесы, анкеры и дюбели берутся из ролей Армстронга (общие). Калькулятор считает количество по ролям (плиты, профили, крепёж — в штуках). Здесь вы указываете, какая позиция 1С стоит за каждой ролью:
       калькулятор покажет её название, а в счёт (i5) строка придёт сразу с кодом 1С, единицей, пачкой и рекомендованной ценой.
       Если единица в 1С другая, количество пересчитается: плиты шт → м² по площади плиты, профили и уголок шт → м.п. по длине.
       В счёте позицию можно заменить через 📁 — это меняет только этот счёт. Непривязанная роль уйдёт в счёт со старым названием и пометкой «не привязано к 1С».
@@ -880,6 +893,11 @@ td.muted{color:#9aa1ac;font-size:12px;white-space:nowrap}
   }
 
   function actionOpenCalc(rec) {
+    if (rec.type === 'grilyato') {
+      window.open(CJ.calcUrlForRecord(rec), '_blank');
+      notify('Открываю калькулятор Грильято по записи ' + (rec.number || rec.id));
+      return;
+    }
     // Если запись создана Армстронгом — ведем в его репозиторий
     if (rec.type === 'armstrong') {
       var url = 'https://6471811-source.github.io/Cubica-armstrong/';
@@ -1238,6 +1256,11 @@ var armstrongUrl = 'https://6471811-source.github.io/Cubica-armstrong/';
   if (!confirm('Открыть калькулятор Армстронга?\n\n' + armstrongUrl)) return;
   window.open(armstrongUrl, '_blank');
 });
+    $('btnNewGrilyato').addEventListener('click', function () {
+      var u = (CJ.loadSettings && CJ.loadSettings().urls && CJ.loadSettings().urls.grilyato) || 'https://6471811-source.github.io/Cubica-grilyato/';
+      if (!confirm('Открыть калькулятор Грильято?\n\n' + u)) return;
+      window.open(u, '_blank');
+    });
     $('btnExport').addEventListener('click', exportJson);
     $('btnImport').addEventListener('click', function () { $('importFile').click(); });
     $('importFile').addEventListener('change', function () {
@@ -1672,19 +1695,32 @@ $('mStatus').addEventListener('change', function () {
     });
   }
   /* ---------- Роли Армстронга ---------- */
-  var catMode = 'nom', rpRole = null, _rolesByCode = null;
+  var catMode = 'nom', rpRole = null, _rolesByCode = null, rolesCalc = 'armstrong';
+  var CALC_TITLE = { armstrong: 'Армстронг', grilyato: 'Грильято' };
+  function roleFilterOk(d) {
+    if (rolesCalc !== 'grilyato') return true;
+    var fs = $('grfSys').value, fc = $('grfCell').value, fo = $('grfColor').value;
+    if (fs && d.grp !== fs) return false;
+    if (fc === '-' && d.cell) return false;
+    if (fc && fc !== '-' && String(d.cell) !== fc) return false;
+    if (fo && d.color !== fo) return false;
+    if ($('grfFree').checked) { var b = CJ.rolesMap()[d.key]; if (b && b.code) return false; }
+    return true;
+  }
   function coreHasRoles() { return typeof CJ.rolesMap === 'function' && typeof CJ.roleDefs === 'function'; }
   function rolesByCode() {
     if (_rolesByCode) return _rolesByCode;
     _rolesByCode = {};
     if (!coreHasRoles()) return _rolesByCode;
     var m = CJ.rolesMap();
-    CJ.roleDefs('armstrong').forEach(function (d) { var b = m[d.key]; if (b && b.code) (_rolesByCode[b.code] = _rolesByCode[b.code] || []).push(d.label); });
+    ['armstrong', 'grilyato'].forEach(function (calc) {
+      CJ.roleDefs(calc).forEach(function (d) { var b = m[d.key]; if (b && b.code) (_rolesByCode[b.code] = _rolesByCode[b.code] || []).push(CALC_TITLE[calc] + ': ' + d.label); });
+    });
     return _rolesByCode;
   }
   function roleTagsFor(code) {
     var a = rolesByCode()[code]; if (!a) return '';
-    return a.map(function (l) { return '<span class="role-tag" title="Роль калькулятора Армстронга">Армстронг: ' + esc(l) + '</span>'; }).join('');
+    return a.map(function (l) { return '<span class="role-tag" title="Роль калькулятора">' + esc(l) + '</span>'; }).join('');
   }
   function packText(e) {
     if (!e || !(e.packQty > 0)) return '';
@@ -1693,9 +1729,12 @@ $('mStatus').addEventListener('change', function () {
   }
   function renderRoles() {
     if (!coreHasRoles()) { $('rolesBody').innerHTML = ''; $('rolesInfo').textContent = 'Загружена старая версия journal-core.js — обновите файл и нажмите Ctrl+F5.'; return; }
-    var m = CJ.rolesMap(), idx = CJ.nomIndex(), defs = CJ.roleDefs('armstrong');
-    var linked = defs.filter(function (d) { return m[d.key] && m[d.key].code; }).length;
-    $('rolesInfo').innerHTML = 'Привязано ролей: <b>' + linked + '</b> из <b>' + defs.length + '</b>' + (CJ.isApi() ? ' · хранится на сервере, общее для всех' : ' · сейчас только в этом браузере (включите серверный режим для общего доступа)');
+    var m = CJ.rolesMap(), idx = CJ.nomIndex(), all = CJ.roleDefs(rolesCalc);
+    $('grFilters').hidden = rolesCalc !== 'grilyato';
+    var defs = all.filter(roleFilterOk);
+    var linked = all.filter(function (d) { return m[d.key] && m[d.key].code; }).length;
+    if (rolesCalc === 'grilyato' && !all.length) { $('rolesBody').innerHTML = ''; $('rolesInfo').textContent = 'В ядре нет ролей Грильято — обновите journal-core.js (v1.8.0) и нажмите Ctrl+F5.'; return; }
+    $('rolesInfo').innerHTML = CALC_TITLE[rolesCalc] + ' · привязано ролей: <b>' + linked + '</b> из <b>' + all.length + '</b>' + (defs.length !== all.length ? ' · показано: <b>' + defs.length + '</b>' : '') + (CJ.isApi() ? ' · хранится на сервере, общее для всех' : ' · сейчас только в этом браузере (включите серверный режим для общего доступа)');
     $('rolesBody').innerHTML = defs.map(function (d) {
       var b = m[d.key];
       var cells;
@@ -1770,6 +1809,13 @@ $('mStatus').addEventListener('change', function () {
   }
   function bindRoles() {
     $('catMode').addEventListener('click', function (e) { var b = e.target.closest('button[data-mode]'); if (b) setCatMode(b.getAttribute('data-mode')); });
+    $('rolesCalc').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-calc]'); if (!b) return;
+      rolesCalc = b.getAttribute('data-calc');
+      $('rolesCalc').querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      renderRoles();
+    });
+    ['grfSys', 'grfCell', 'grfColor', 'grfFree'].forEach(function (id) { $(id).addEventListener('change', renderRoles); });
     $('rolesBody').addEventListener('click', function (e) {
       var tr = e.target.closest('tr[data-role]'); if (!tr) return;
       var key = tr.getAttribute('data-role');
